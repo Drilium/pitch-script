@@ -39,7 +39,7 @@ TIMEOUT = 30
 MIRROR_FPL = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data"
 MIRROR_FD = "https://raw.githubusercontent.com/datasets/football-datasets/main/datasets/premier-league"
 FPL_API = "https://fantasy.premierleague.com/api"
-FD_BASE = "https://www.football-data.co.uk"
+FD_BASE = "https://football-data.co.uk"
 UNDERSTAT = "https://understat.com"
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1"
 
@@ -181,9 +181,18 @@ def load_fpl(season, current=False):
     fixtures["kickoff_time"] = pd.to_datetime(fixtures["kickoff_time"], utc=True, errors="coerce")
     for c in ["team_h", "team_a", "event", "id"]:
         fixtures[c] = pd.to_numeric(fixtures[c], errors="coerce").astype("Int64")
+    # A match counts as played once FPL marks it finished OR provisionally finished
+    # (full-time, bonus points still pending). FPL's player histories also list the
+    # current gameweek's unplayed matches with zero minutes, so drop those rows.
+    as_bool = lambda s: s.astype(str).str.lower().isin(["true", "1"])
+    done = as_bool(fixtures["finished"])
+    if "finished_provisional" in fixtures.columns:
+        done = done | as_bool(fixtures["finished_provisional"])
+    fixtures["finished"] = done & fixtures["team_h_score"].notna()
 
     gw = gw[[c for c in FPL_KEEP if c in gw.columns]].copy()
     gw = gw[gw["element"].isin(players["id"])]
+    gw = gw[pd.to_numeric(gw["fixture"], errors="coerce").isin(fixtures.loc[fixtures["finished"], "id"].astype(int))]
     for c in gw.columns:
         if c not in ("kickoff_time", "was_home"):
             gw[c] = pd.to_numeric(gw[c], errors="coerce")
@@ -437,21 +446,44 @@ def load_understat(year, fixtures, players, gw, fpl_teams, season):
 # ----------------------------------------------------------------------------
 # 4. ESPN: fouls committed / drawn, offsides, shots, SOT per player-match
 # ----------------------------------------------------------------------------
+ESPN_TEAM_KEYS = {
+    "totalShots": "shots", "shotsOnTarget": "sot", "foulsCommitted": "fouls", "wonCorners": "corners",
+    "yellowCards": "yellow", "redCards": "red", "possessionPct": "possession", "totalPasses": "passes",
+    "accuratePasses": "passes_acc", "totalTackles": "tackles",
+}
 ESPN_STAT_KEYS = {
     "foulsCommitted": "fouls", "foulsSuffered": "fouls_drawn", "offsides": "offsides",
     "totalShots": "espn_shots", "shotsOnTarget": "espn_sot", "saves": "espn_saves",
 }
 
 
-def load_espn(season_start, fixtures, players, gw, fpl_teams):
+def load_espn(fixtures, players, gw, fpl_teams):
+    """ESPN's scoreboard rejects long date ranges, so ask for each date that had a finished match."""
     tmap = team_mapper(fpl_teams)
-    today = dt.date.today()
-    try:
-        url = f"{ESPN}/scoreboard?dates={season_start:%Y%m%d}-{today:%Y%m%d}&limit=500"
-        events = get(url).json().get("events", [])
-    except Exception as e:
-        return pd.DataFrame(), pd.DataFrame(), status("ESPN", False, note=f"unreachable ({type(e).__name__}); "
+    fin = fixtures[fixtures["finished"]].dropna(subset=["kickoff_time"])
+    # ESPN files matches under US Eastern dates; ask for that date and the UTC date to be safe
+    dates = set(fin["kickoff_time"].dt.tz_convert("America/New_York").dt.strftime("%Y%m%d")) | \
+        set(fin["kickoff_time"].dt.strftime("%Y%m%d"))
+    events, errors = {}, 0
+
+    def day(d):
+        try:
+            return get(f"{ESPN}/scoreboard?dates={d}&limit=50").json().get("events", [])
+        except Exception:
+            return None
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for evs in ex.map(day, sorted(dates)):
+            if evs is None:
+                errors += 1
+                continue
+            for e in evs:
+                events[e["id"]] = e
+    if not events:
+        return pd.DataFrame(), pd.DataFrame(), status("ESPN", False, note=f"unreachable ({errors} date requests failed); "
                                                      "fouls / fouls drawn fill in from GitHub Actions")
+    events = list(events.values())
+    today = dt.date.today()
     done = [e for e in events if e.get("status", {}).get("type", {}).get("completed")]
     look = _fixture_lookup(fixtures)
     name_idx = build_name_index(players)
@@ -480,7 +512,8 @@ def load_espn(season_start, fixtures, players, gw, fpl_teams):
         for t in summ.get("boxscore", {}).get("teams", []):
             team = tmap(t["team"]["displayName"])
             stats = {s.get("name"): s.get("displayValue") for s in t.get("statistics", [])}
-            trow.append({"fixture": fx, "team": team, "possession": pd.to_numeric(stats.get("possessionPct"), errors="coerce")})
+            trow.append({"fixture": fx, "team": team,
+                         **{v: pd.to_numeric(stats.get(k), errors="coerce") for k, v in ESPN_TEAM_KEYS.items()}})
         for ros in summ.get("rosters", []):
             team = tmap(ros["team"]["displayName"])
             plist = [p for p in ros.get("roster", []) if p.get("stats")]

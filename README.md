@@ -46,15 +46,18 @@ in earlier starts (what most prop apps show). Brier score, lower is better.
 |---|---|---|---|---|
 | Anytime goal | 6,546 | 0.086 | 0.092 | +7.3% |
 | Assist | 6,546 | 0.088 | 0.095 | +7.1% |
+| Shots over 1.5 | 6,546 | 0.166 | 0.177 | +6.2% |
+| Shots on target over 0.5 | 6,546 | 0.180 | 0.192 | +6.1% |
 | Tackles over 1.5 | 6,546 | 0.217 | 0.231 | +6.2% |
+| Fouls over 1.5 | 6,545 | 0.178 | 0.190 | +6.2% |
 | Keeper saves over 2.5 | 660 | 0.244 | 0.266 | +8.1% |
 | Carded | 7,206 | 0.126 | 0.135 | +6.8% |
-| Win / draw / loss | 330 matches | 0.623 | 0.654 (league rates) | |
+| Win / draw / loss | 330 matches | 0.623 | 0.654 (league rates) | +4.7% |
 | Over 2.5 goals | 330 matches | 0.249 | 0.247 (league rate) | none |
 
 The model beats hit rates on every player market and on match winners, but not on
-goal totals. This season (GW3–6, never used for tuning) the calibrated model is
-11–13% better than hit rates on goals, tackles and cards.
+goal totals. On this season (GW3–8, never used for tuning) the calibrated model
+beats hit rates by 10–14% on goals, shots, shots on target, tackles, fouls and cards.
 
 ## Data
 
@@ -62,22 +65,23 @@ All free. Details, health checks and the paid options are in
 [DATA_SOURCES.md](DATA_SOURCES.md).
 
 - **FPL official API**: minutes, goals, assists, xG, xA, tackles, saves, cards, injuries, set pieces (Opta-sourced)
-- **Understat**: shots, shots on target, key passes
-- **ESPN public JSON**: fouls committed and drawn
+- **Understat**: shots, key passes, shot-level data
+- **ESPN public JSON**: shots on target, fouls committed and drawn, team box scores (passes, possession, corners)
 - **football-data.co.uk**: team shots, fouls, corners, cards, referees, bookmaker odds
+
+Understat and ESPN are checked against each other on every build: they agree on
+99.6% of player shot counts exactly and 100% within one.
 
 ## Setup
 
-1. Push this folder to a new GitHub repo.
-2. **Settings → Actions → General → Workflow permissions**: choose *Read and write*.
-3. **Actions → Refresh Premier League data → Run workflow** once. The first run pulls
-   last season's Understat and ESPN data, caches it in `cache/`, and re-runs the
-   backtest with shots and fouls included.
-4. Connect the repo to Netlify (no build command, publish directory `.`). Each data
-   commit redeploys the site.
+Hosted on GitHub Pages from the `main` branch (`.nojekyll` serves files as-is).
+
+1. **Settings → Actions → General → Workflow permissions**: *Read and write*.
+2. **Settings → Pages**: source *Deploy from a branch*, branch `main`, folder `/`.
+3. **Actions → Refresh Premier League data → Run workflow** to refresh on demand.
 
 The workflow runs daily at 07:17 UTC (3:17am ET), so weekend, Monday and midweek
-results land the next morning.
+results land the next morning. Each data commit redeploys the Pages site.
 
 ## Run locally
 

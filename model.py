@@ -68,7 +68,8 @@ def add_stat_columns(pm: pd.DataFrame) -> pd.DataFrame:
     pm["ga_v"] = pm["goals_v"] + pm["assists_v"]
     # shots prefer Understat, fall back to ESPN
     pm["shots_v"] = g("shots").fillna(g("espn_shots"))
-    pm["sot_v"] = g("sot").fillna(g("espn_sot"))
+    # ESPN's on-target count follows the official definition books settle on (Understat runs ~4% lower)
+    pm["sot_v"] = g("espn_sot").fillna(g("sot"))
     pm["tackles_v"] = g("tackles")
     pm["fouls_v"] = g("fouls")
     pm["cards_v"] = g("yellow").fillna(0) + g("red").fillna(0)

@@ -725,7 +725,7 @@ function viewModel(){
   </section>
   <section><h2 class="h2">Where the data comes from</h2>
   <div class="box"><h3 class="h3">Sources this build</h3><div class="tw"><table><thead><tr><th>Source</th><th>Status</th><th class="r">Rows</th><th>Through</th><th>Notes</th></tr></thead><tbody>${srcRows}</tbody></table></div>
-  <p class="note">"Not reached" sources are blocked in the build environment used for this snapshot; the weekly GitHub Actions run reaches all of them.</p></div>
+  <p class="note">A source marked "Not reached" failed on this build; the next daily refresh retries it. ESPN team box scores stand in for football-data.co.uk team stats when it is down.</p></div>
   <div class="box"><h3 class="h3">Data checks</h3><p class="small muted">Independent feeds are checked against each other on every build.</p><div class="tw"><table><thead><tr><th>Season</th><th>Check</th><th>Result</th><th class="r">Passed</th><th>Detail</th></tr></thead><tbody>${health}</tbody></table></div></div>
   <div class="box"><h3 class="h3">What free data can't cover</h3><div class="tw"><table><thead><tr><th>Gap</th><th>Why it matters</th><th>Cheapest fix</th></tr></thead><tbody>
     <tr><td>Passes per player</td><td>Pass-attempt props (midfielders, center backs)</td><td>API-Football Pro, $19/mo: per-player passes, key passes, tackles, fouls, shots</td></tr>

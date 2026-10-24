@@ -107,6 +107,17 @@ def health_checks(pm, fixtures, fd, season):
         bad = int(((d.sot > d.shots) | (d.goals > d.sot)).sum())
         out.append({"season": season, "check": "Shots on target <= shots and goals <= shots on target",
                     "passed": int(len(d) - bad), "failed": bad, "detail": "Understat counts vs FPL goals"})
+    # 5. two independent shot feeds agree (Understat vs ESPN)
+    if {"shots", "espn_shots"} <= set(pm.columns):
+        d = pm.dropna(subset=["shots", "espn_shots"])
+        if len(d):
+            close = int(((d.shots - d.espn_shots).abs() <= 1).sum())
+            same = int((d.shots == d.espn_shots).sum())
+            sot_same = int((d.sot == d.espn_sot).sum()) if "espn_sot" in d else 0
+            out.append({"season": season, "check": "Understat and ESPN agree on each player's shots (within one)",
+                        "passed": close, "failed": int(len(d) - close),
+                        "detail": f"{same/len(d):.1%} exact on shots, {sot_same/len(d):.1%} on shots on target "
+                                  f"(ESPN used for on target: {int(d.espn_sot.sum())} vs Understat {int(d.sot.sum())})"})
     return out
 
 
@@ -167,8 +178,8 @@ def main():
     us_c, st = S.load_understat(2026, fx_c, pl_c, pm_c, tm_c, CUR); sources.append(st)
     us_p, st = cached("understat_2025-26.csv", lambda: S.load_understat(2025, fx_p, pl_p, pm_p, tm_p, PREV)); sources.append(st)
     log("ESPN ...")
-    es_c, poss_c, st = S.load_espn(CUR_START, fx_c, pl_c, pm_c, tm_c); sources.append(st)
-    es_p, st = cached("espn_2025-26.csv", lambda: S.load_espn(PREV_START, fx_p, pl_p, pm_p, tm_p)[::2]); sources.append(st)
+    es_c, poss_c, st = S.load_espn(fx_c, pl_c, pm_c, tm_c); sources.append(st)
+    es_p, st = cached("espn_2025-26.csv", lambda: S.load_espn(fx_p, pl_p, pm_p, tm_p)[::2]); sources.append(st)
     pm_c = merge_external(merge_external(pm_c, us_c), es_c)
     pm_p = merge_external(merge_external(pm_p, us_p), es_p)
 
@@ -233,7 +244,7 @@ def main():
     upcoming = fx_c[(fx_c["kickoff_time"] > data_through) & fx_c["team_h"].notna()].sort_values("kickoff_time")
     next_gw = int(upcoming[upcoming["kickoff_time"] > now - pd.Timedelta(hours=3)]["event"].min()) \
         if len(upcoming) else None
-    proj_fx = fx_c[fx_c["event"] == next_gw] if next_gw else fx_c.iloc[0:0]
+    proj_fx = fx_c[(fx_c["event"] == next_gw) & ~fx_c["finished"]] if next_gw else fx_c.iloc[0:0]
 
     short_c = dict(zip(tm_c["id"].astype(int), tm_c["short_name"]))
     fixtures_out, proj_rows = [], []
@@ -313,6 +324,28 @@ def main():
         logs += [[clean(v) for v in row] for row in d[LOG_COLS].itertuples(index=False, name=None)]
 
     # ---------------- team match stats (football-data) + referees -----------------
+    # this season's team match stats: football-data.co.uk when reachable, otherwise ESPN's box scores
+    if (fd_c is None or not len(fd_c)) and poss_c is not None and len(poss_c):
+        fin = fx_c[fx_c["finished"]].set_index("id")
+        rows = []
+        for fid, g in poss_c.groupby("fixture"):
+            if fid not in fin.index or len(g) != 2:
+                continue
+            f = fin.loc[fid]
+            h = g[g.team == f.team_h].iloc[0] if (g.team == f.team_h).any() else None
+            a = g[g.team == f.team_a].iloc[0] if (g.team == f.team_a).any() else None
+            if h is None or a is None:
+                continue
+            r = {"date": f.kickoff_time.date(), "home": int(f.team_h), "away": int(f.team_a), "home_name": "", "away_name": "",
+                 "h_goals": f.team_h_score, "a_goals": f.team_a_score, "referee": None}
+            for k in ["shots", "sot", "fouls", "corners", "yellow", "red", "possession", "passes", "passes_acc", "tackles"]:
+                r["h_" + k], r["a_" + k] = h.get(k), a.get(k)
+            rows.append(r)
+        fd_c = pd.DataFrame(rows)
+        if len(fd_c):
+            fd_c["season"] = CUR
+            sources.append(S.status("ESPN team box scores (stand-in for football-data.co.uk)", True, len(fd_c),
+                                    str(fd_c["date"].max()), "shots, fouls, corners, cards, possession, passes"))
     team_stats = []
     for fd, season in ((fd_c, CUR), (fd_p, PREV)):
         if fd is None or not len(fd):
@@ -321,7 +354,8 @@ def main():
         for _, r in fd.iterrows():
             team_stats.append({k: clean(r.get(k)) for k in
                                ["date", "h_shots", "a_shots", "h_sot", "a_sot", "h_fouls", "a_fouls", "h_corners",
-                                "a_corners", "h_yellow", "a_yellow", "h_red", "a_red", "h_goals", "a_goals", "referee"]}
+                                "a_corners", "h_yellow", "a_yellow", "h_red", "a_red", "h_goals", "a_goals", "referee",
+                                "h_possession", "a_possession", "h_passes", "a_passes"]}
                               | {"season": season, "home": sh.get(int(r.home)) if pd.notna(r.home) else r.home_name,
                                  "away": sh.get(int(r.away)) if pd.notna(r.away) else r.away_name})
     refs = []

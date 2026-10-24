@@ -9,8 +9,8 @@ what it can't, and what paying for would add.
 |---|---|---|---|
 | **FPL official API** (`fantasy.premierleague.com/api`) | Per player, per match: minutes, starts, goals, assists, xG, xA, xG conceded, tackles, clearances/blocks/interceptions, recoveries, defensive contributions, saves, cards, bonus. Plus injury status, chance of playing, news text, set-piece order, fixtures. | Every player rate, the minutes model, availability, team ratings (xG), fantasy section | Opta-sourced. Official and free. |
 | **vaastav/Fantasy-Premier-League** (GitHub) | Same fields as above, mirrored as CSV | Fallback when the FPL API is unreachable; last two seasons for priors and the backtest | Lags the live API by about a week. |
-| **Understat** (`understat.com`) | Per player, per match: shots, key passes, xG chain/buildup. Shot-level data (result of every shot) | Shots and shots-on-target props (SoT = goals + saved shots) | Unofficial JSON endpoints. Parsed two ways in case the site changes format. |
-| **ESPN public JSON** (`site.api.espn.com`) | Per player, per match: fouls committed, fouls drawn, offsides, shots, shots on target, saves. Team possession | Fouls props; backup shots source | Undocumented and unlicensed. Could change without notice. |
+| **Understat** (`understat.com`) | Per player, per match: shots, key passes, xG chain/buildup. Shot-level data (result of every shot) | Shots props; backup for shots on target | Unofficial JSON endpoints. Parsed two ways in case the site changes format. |
+| **ESPN public JSON** (`site.api.espn.com`) | Per player, per match: fouls committed, fouls drawn, shots, shots on target, saves. Per team: shots, fouls, corners, cards, possession, passes, tackles | Fouls and shots-on-target props; this season's team match stats | Undocumented and unlicensed. Could change without notice. Counts about 4% more shots on target than Understat, in line with the official definition books settle on. |
 | **football-data.co.uk** | Per match: shots, shots on target, fouls, corners, cards per team, referee, and bookmaker odds (Pinnacle, Bet365, market average, closing lines). `fixtures.csv` has this week's odds | Team comparison, referee table, market vs model on match odds | Free CSVs, updated twice a week. |
 | **datasets/football-datasets** (GitHub) | football-data.co.uk results and team stats, no odds | Fallback for past seasons | |
 
@@ -20,8 +20,10 @@ what it can't, and what paying for would add.
 - Exactly 11 starters per team per match.
 - football-data.co.uk scores match FPL scores (two independent feeds).
 - Shots on target never exceed shots; goals never exceed shots on target.
+- Understat and ESPN agree on each player's shots (99.6% exact, 100% within one).
 
-All passed on the 2025-26 season (380/380 matches) and 2026-27 so far.
+All passed on the 2025-26 season (380/380 matches) and 2026-27 so far (one
+Understat shot mismatch in 11,490 player-matches last season).
 
 ## What free data can't cover
 
