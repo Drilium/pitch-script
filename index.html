@@ -1,0 +1,769 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pitch Script</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Premier League matchups, player prop projections and the data behind them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@60..130,500..800&family=IBM+Plex+Mono:wght@400;600&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: night-pitch page with chalk headings; every piece of data sits in a raised steel box (Dre's rule: data pops off the page). */
+:root{
+  --pitch:#101914; --pitch-2:#17231c; --line:#2b3b31;
+  --chalk:#e9ede6; --chalk-dim:#a6b3aa;
+  --steel:#dde1da; --steel-hi:#eceee9; --steel-2:#ccd1c9; --steel-3:#bfc5bc;
+  --ink:#121a15; --ink-2:#46524a; --ink-3:#68736b;
+  --accent:#1c6743; --accent-2:#2f8a5b; --hot:#b5601d;
+  --good:#1d6b39; --warn:#8f560a; --bad:#9e2e28;
+  --model:#1b67a8; --base:#b5601d;
+  --f-display:"Anybody","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--pitch);color:var(--chalk);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--pitch)}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto}
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--pitch);border-bottom:1px solid var(--line);
+  margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px)) 0}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-stretch:68%;font-weight:800;font-size:28px;letter-spacing:.01em;margin:0;line-height:1;text-transform:uppercase}
+.brand h1 span{color:var(--accent-2)}
+.brand .sub{color:var(--chalk-dim);font-size:13px}
+nav{display:flex;gap:2px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+nav a{font-family:var(--f-display);font-stretch:80%;font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.04em;
+  text-decoration:none;color:var(--chalk-dim);padding:8px 12px 10px;border-bottom:3px solid transparent;white-space:nowrap}
+nav a:hover{color:var(--chalk)}
+nav a[aria-current="page"]{color:var(--chalk);border-bottom-color:var(--accent-2)}
+:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+/* sections */
+main{padding-top:18px;display:grid;gap:22px}
+.h2{font-family:var(--f-display);font-stretch:72%;font-weight:700;font-size:24px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 10px;text-wrap:balance;line-height:1.1}
+.h3{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:17px;margin:0 0 8px;color:var(--ink);text-transform:uppercase;letter-spacing:.03em}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--chalk-dim);font-weight:700}
+.lead{color:var(--chalk-dim);max-width:70ch;margin:0 0 12px}
+section{min-width:0}
+/* the raised steel box */
+.box{background:linear-gradient(180deg,var(--steel-hi),var(--steel) 40%);color:var(--ink);border-radius:var(--r);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 2px 3px rgba(0,0,0,.45),0 12px 28px rgba(0,0,0,.42);padding:16px;min-width:0}
+.box + .box{margin-top:14px}
+.box .muted{color:var(--ink-2)}
+.box p{margin:0 0 8px}
+.box a{color:var(--accent);font-weight:600;text-decoration-thickness:1px;text-underline-offset:2px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+@media (max-width:420px){.g2,.g3{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.small{font-size:13px}.tiny{font-size:12px}
+/* banner */
+.banner{border:1px solid var(--line);border-left:4px solid var(--hot);background:var(--pitch-2);border-radius:8px;padding:10px 14px;color:var(--chalk);font-size:14px}
+.banner b{color:var(--chalk)}
+.banner .chalk-dim{color:var(--chalk-dim)}
+/* fixture cards */
+.fx{display:grid;gap:10px;cursor:pointer;text-decoration:none;color:var(--ink)}
+.fx:hover{transform:translateY(-1px)}
+.fx-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.tcode{font-family:var(--f-display);font-stretch:62%;font-weight:800;font-size:34px;line-height:.9;letter-spacing:.01em}
+.tname{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:11ch}
+.fx-teams > div{min-width:0}
+.fx-mid{text-align:center;font-family:var(--f-mono);font-size:13px;color:var(--ink-2)}
+.fx-mid .xg{font-size:17px;color:var(--ink);font-weight:600;white-space:nowrap}
+.wdl{display:flex;height:22px;border-radius:5px;overflow:hidden;gap:2px;background:var(--steel)}
+.wdl > div{display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:12px;font-weight:600;color:#fff;min-width:28px}
+.wdl .h{background:var(--accent)} .wdl .d{background:#6b736c} .wdl .a{background:#2f4a6b}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--f-mono);font-size:12px;background:var(--steel-2);border-radius:999px;padding:2px 9px;color:var(--ink);white-space:nowrap}
+.chip b{font-weight:600}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:1px 6px;vertical-align:1px}
+.pill.ok{background:#cfe3d4;color:var(--good)} .pill.warn{background:#f1dfc0;color:var(--warn)} .pill.bad{background:#f0cfcb;color:var(--bad)} .pill.n{background:var(--steel-3);color:var(--ink-2)}
+/* controls */
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button,.btn{font:600 13px var(--f-body);border:1px solid var(--steel-3);background:var(--steel-hi);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--steel-hi);border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+input,select{font:14px var(--f-body);color:var(--ink);background:#f6f7f4;border:1px solid var(--steel-3);border-radius:6px;padding:6px 8px;min-width:0;color-scheme:light}
+label.f{display:grid;gap:3px;font-size:12px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
+.dark-controls label.f{color:var(--chalk-dim)}
+/* tables */
+.tw{overflow-x:auto;margin:0 -4px;padding:0 4px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;color:inherit;font-family:inherit;line-height:inherit}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);font-weight:700;text-align:left;padding:6px 8px;border-bottom:2px solid var(--steel-3);white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:6px 8px;border-bottom:1px solid var(--steel-2);vertical-align:middle}
+td.num,th.num{text-align:right}
+tbody tr:hover{background:rgba(255,255,255,.45)}
+th[data-sort]{cursor:pointer}
+th[data-sort]:hover{color:var(--ink)}
+.prob{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.prob i{display:block;height:6px;border-radius:3px;background:var(--accent);min-width:2px}
+.prob .t{width:44px;text-align:right}
+.cell-link{cursor:pointer;text-decoration:underline;text-decoration-color:var(--steel-3);text-underline-offset:3px}
+.cell-link:hover{background:#f6f7f4}
+.f-hi{color:var(--good);font-weight:600}.f-lo{color:var(--bad);font-weight:600}
+.na{color:var(--ink-3);font-style:italic}
+.stat-big{font-family:var(--f-display);font-stretch:70%;font-weight:800;font-size:36px;line-height:1;color:var(--ink)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--ink-2)} .kv dd{margin:0;font-family:var(--f-mono)}
+.note{font-size:13px;color:var(--ink-2);border-top:1px dashed var(--steel-3);padding-top:8px;margin-top:10px}
+.player-head{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between}
+.player-head h2{font-family:var(--f-display);font-stretch:66%;font-weight:800;font-size:44px;line-height:.95;margin:0;text-transform:uppercase}
+.fantasy{border:2px dashed var(--line);border-radius:12px;padding:14px}
+.fantasy > .eyebrow{display:block;margin-bottom:8px}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(5,10,7,.7);z-index:20;display:flex;align-items:flex-start;justify-content:center;
+  padding:max(40px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 20px max(12px,env(safe-area-inset-left,0px));overflow:auto}
+.scrim .box{width:min(860px,100%)}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--steel-hi);font:12px var(--f-mono);padding:6px 8px;border-radius:6px;z-index:30;max-width:240px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.empty{padding:30px;text-align:center;color:var(--ink-2)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.fx:hover{transform:none}}
+.fx{transition:transform .15s ease}
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Pitch<span>·</span>Script</h1><span class="sub" id="sub">Premier League matchups &amp; player props</span></div>
+    <nav id="nav" aria-label="Sections">
+      <a href="#matchday" data-v="matchday">Matchday</a>
+      <a href="#props" data-v="props">Props</a>
+      <a href="#players" data-v="players">Players</a>
+      <a href="#teams" data-v="teams">Teams</a>
+      <a href="#compare" data-v="compare">Compare</a>
+      <a href="#model" data-v="model">Model &amp; data</a>
+    </nav>
+  </div>
+</div>
+<main class="wrap" id="app"><div class="box empty">Loading Premier League data…</div></main>
+<div id="modal" hidden></div>
+<div id="tip" class="tip" hidden></div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- data
+let D, C = {}, LOGS = [], LOG_BY_CODE = new Map(), PL = new Map(), PL_BY_CODE = new Map(), TM = new Map(), TM_BY_SHORT = new Map(),
+    PROJ = new Map(), FIX = new Map(), SEASON, PREV_SEASON, TOT = new Map(), LEAGUE90 = {};
+const STAT_LABEL = {goals:"Goals",assists:"Assists",ga:"Goal or assist",shots:"Shots",sot:"Shots on target",tackles:"Tackles",
+  fouls:"Fouls committed",cards:"Carded",saves:"Keeper saves",def_contrib:"Defensive contributions"};
+const PROP_ORDER = ["goals","sot","shots","assists","ga","tackles","fouls","cards","saves"];
+const NEEDS_LIVE = {shots:"Understat", sot:"Understat", fouls:"ESPN", key_passes:"Understat"};
+const POSS = ["GK","DEF","MID","FWD"];
+
+async function load(){
+  const emb = document.getElementById("pitch-data");
+  if (emb) D = JSON.parse(emb.textContent);
+  else { const r = await fetch("soccer_data.json", {cache:"no-cache"}); D = await r.json(); }
+  D.log_cols.forEach((c,i)=>C[c]=i);
+  SEASON = D.meta.season; PREV_SEASON = D.backtest?.season || "2025-26";
+  D.teams.forEach(t=>{TM.set(t.id,t);TM_BY_SHORT.set(t.short,t)});
+  D.players.forEach(p=>{PL.set(p.id,p);PL_BY_CODE.set(p.code,p)});
+  for (const r of D.logs){
+    const o = {}; for (const c in C) o[c] = r[C[c]];
+    o.cards = (o.yellow||0) + (o.red||0);
+    o.pos = PL_BY_CODE.get(o.code)?.pos;
+    LOGS.push(o);
+    if (!LOG_BY_CODE.has(o.code)) LOG_BY_CODE.set(o.code, []);
+    LOG_BY_CODE.get(o.code).push(o);
+  }
+  for (const a of LOG_BY_CODE.values()) a.sort((x,y)=>x.kickoff<y.kickoff?1:-1);
+  D.projections.forEach(p=>{ if(!PROJ.has(p.pid)) PROJ.set(p.pid,[]); PROJ.get(p.pid).push(p) });
+  D.fixtures.forEach(f=>FIX.set(f.id,f));
+  // season totals per player (this season)
+  for (const o of LOGS){
+    if (o.season!==SEASON) continue;
+    const t = TOT.get(o.code) || {mins:0,apps:0,starts:0,goals:0,assists:0,xg:0,xa:0,tackles:0,saves:0,cards:0,def_contrib:0,fpl_pts:0,cbi:0,recoveries:0,shots:null,sot:null,fouls:null};
+    t.mins+=o.minutes||0; if(o.minutes>0)t.apps++; t.starts+=o.starts||0;
+    for (const k of ["goals","assists","xg","xa","tackles","saves","cards","def_contrib","fpl_pts","cbi","recoveries"]) t[k]+=o[k]||0;
+    for (const k of ["shots","sot","fouls"]) if(o[k]!=null) t[k]=(t[k]||0)+o[k];
+    TOT.set(o.code,t);
+  }
+  // league per-90 by position this season (for "allows" comparisons)
+  for (const pos of POSS){
+    const rows = LOGS.filter(o=>o.season===SEASON && o.pos===pos && o.minutes>0);
+    LEAGUE90[pos] = per90(rows);
+  }
+}
+const ALLOW_STATS = ["xg","goals","shots","sot","tackles","fouls","cards","saves","def_contrib"];
+function per90(rows){
+  const out = {}; let mins = 0; rows.forEach(r=>mins+=r.minutes||0);
+  for (const s of ALLOW_STATS){
+    let v=0, m=0, any=false;
+    rows.forEach(r=>{ if(r[s]!=null){ v+=r[s]; m+=r.minutes||0; any=true } });
+    out[s] = any && m>0 ? v/(m/90) : null;
+  }
+  out._n90 = mins/90; return out;
+}
+
+// ---------------------------------------------------------------- helpers
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = (p,d=0)=>p==null?"–":(p*100).toFixed(d)+"%";
+const f1 = (x,d=1)=>x==null||isNaN(x)?"–":Number(x).toFixed(d);
+function american(p){ if(p==null||p<0.01||p>0.99) return "–"; return p>=.5 ? "−"+Math.round(100*p/(1-p)) : "+"+Math.round(100*(1-p)/p) }
+function impliedFromAmerican(o){ o=Number(String(o).replace("−","-")); if(!o||isNaN(o)) return null; return o<0 ? -o/(-o+100) : 100/(o+100) }
+const ET = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const ETd = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",year:"numeric"});
+const kick = iso=>ET.format(new Date(iso))+" ET";
+const day = iso=>iso?ETd.format(new Date(iso.length===10?iso+"T12:00:00Z":iso)):"–";
+const tshort = id=>TM.get(id)?.short||id, tname = id=>TM.get(id)?.name||id;
+const plink = p=>`<a href="#player-${p.id}">${esc(p.web)}</a>`;
+const tlink = short=>TM_BY_SHORT.has(short)?`<a href="#team-${short}">${esc(short)}</a>`:esc(short);
+const has = s=>!NEEDS_LIVE[s] || D.meta.has?.[s];
+function probBar(p){ if(p==null) return '<span class="na">–</span>'; return `<span class="prob"><i style="width:${Math.max(2,p*60)}px"></i><span class="t num">${pct(p)}</span></span>` }
+function statusPill(p){
+  if(!p) return "";
+  if(p.status==="a" && (p.chance==null||p.chance>=100)) return '<span class="pill ok">Available</span>';
+  if(p.status==="d") return `<span class="pill warn">Doubtful ${p.chance!=null?p.chance+"%":""}</span>`;
+  if(p.status==="i") return '<span class="pill bad">Injured</span>';
+  if(p.status==="s") return '<span class="pill bad">Suspended</span>';
+  if(p.status==="u") return '<span class="pill n">Unavailable</span>';
+  return `<span class="pill warn">${esc(p.status)}</span>`;
+}
+function liveNote(s){ return `<span class="na">Not connected yet. Fills in from ${NEEDS_LIVE[s]} when the weekly GitHub Actions refresh runs.</span>` }
+
+// same math as model.py so any line can be priced in the browser
+function nbSF(k, mu, r){
+  k = Math.ceil(k); if(mu<=0) return k>0?0:1; if(k<=0) return 1;
+  let cdf=0;
+  if(!r){ let t=Math.exp(-mu); for(let i=0;i<k;i++){cdf+=t;t*=mu/(i+1)} return Math.min(1,Math.max(0,1-cdf)) }
+  const q=r/(r+mu); let t=Math.pow(q,r);
+  for(let i=0;i<k;i++){cdf+=t;t*=(i+r)/(i+1)*(1-q)} return Math.min(1,Math.max(0,1-cdf));
+}
+function platt(p, s){ const ab=D.backtest?.platt?.[s]; if(!ab) return p; const x=Math.log(Math.min(1-1e-4,Math.max(1e-4,p))/(1-Math.min(1-1e-4,Math.max(1e-4,p)))); return 1/(1+Math.exp(-(ab[0]+ab[1]*x))) }
+function priceLine(pr, s, line){
+  const mk = pr.m[s]; if(!mk) return null;
+  const listed = mk.lines.find(l=>l[0]===line); if(listed) return {ps:listed[1], pp:listed[2]};
+  const r = D.meta.dispersion?.[s]||null, ls = mk.lam, lb = mk.lam*pr.sm/pr.ms;
+  const ps = platt(nbSF(line,ls,r),s), pb = platt(nbSF(line,lb,r),s);
+  const pplay = pr.p_start + (1-pr.p_start)*pr.p_sub;
+  return {ps, pp: pplay>0 ? (pr.p_start*ps + (1-pr.p_start)*pr.p_sub*pb)/pplay : 0};
+}
+
+// ---------------------------------------------------------------- router
+const VIEWS = {matchday:viewMatchday, props:viewProps, players:viewPlayers, teams:viewTeams, compare:viewCompare, model:viewModel};
+function route(){
+  const h = (location.hash||"#matchday").slice(1);
+  let m;
+  closeModal();
+  if ((m=h.match(/^player-(\d+)$/))) return render(viewPlayer(+m[1]), "players");
+  if ((m=h.match(/^match-(\d+)$/))) return render(viewMatch(+m[1]), "matchday");
+  if ((m=h.match(/^team-([A-Za-z]+)$/))) return render(viewTeam(m[1]), "teams");
+  const v = VIEWS[h] ? h : "matchday";
+  render(VIEWS[v](), v);
+}
+function render(html, nav){
+  $("#app").innerHTML = html;
+  document.querySelectorAll("#nav a").forEach(a=>{ if(a.dataset.v===nav) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current") });
+  window.scrollTo(0,0);
+  afterRender.splice(0).forEach(f=>f());
+}
+let afterRender = [];
+window.addEventListener("hashchange", route);
+
+// ---------------------------------------------------------------- freshness banner
+function freshness(){
+  const m = D.meta, built = new Date(m.built_at);
+  const unplayed = D.schedule.filter(f=>new Date(f.kickoff)<built && !f.finished).length;
+  const official = (m.sources[0]?.source||"").includes("official");
+  return `<div class="banner">
+    <b>Stats through ${day(m.data_through)}</b> <span class="chalk-dim">· injury news as of ${day(m.news_as_of)} · built ${day(m.built_at)}</span>
+    ${unplayed?`<br><span class="chalk-dim">${unplayed} matches played since then aren't in these numbers yet (${official?"official FPL feed":"the GitHub mirror of the FPL feed lags about a week; the live refresh pulls the official feed"}).</span>`:""}
+  </div>`;
+}
+
+// ---------------------------------------------------------------- MATCHDAY
+function viewMatchday(){
+  const gw = D.meta.next_gw, now = new Date(D.meta.built_at);
+  const cards = D.fixtures.map(f=>{
+    const m=f.model, started=new Date(f.kickoff)<now;
+    return `<a class="box fx" href="#match-${f.id}">
+      <div class="spread small"><span class="muted">${kick(f.kickoff)}</span>${started?'<span class="pill n">Kicked off</span>':""}</div>
+      <div class="fx-teams">
+        <div><div class="tcode">${tshort(f.h)}</div><div class="tname">${esc(tname(f.h))}</div></div>
+        <div class="fx-mid"><div class="xg">${f1(m.lam_h,2)}–${f1(m.lam_a,2)}</div>exp. goals</div>
+        <div style="text-align:right;display:grid;justify-items:end"><div class="tcode">${tshort(f.a)}</div><div class="tname">${esc(tname(f.a))}</div></div>
+      </div>
+      <div class="wdl" role="img" aria-label="Home ${pct(m.p_home)}, draw ${pct(m.p_draw)}, away ${pct(m.p_away)}">
+        <div class="h" style="flex:${m.p_home}">${pct(m.p_home)}</div><div class="d" style="flex:${m.p_draw}">${pct(m.p_draw)}</div><div class="a" style="flex:${m.p_away}">${pct(m.p_away)}</div></div>
+      <div class="chips"><span class="chip">O2.5 <b>${pct(m.o25)}</b></span><span class="chip">BTTS <b>${pct(m.btts)}</b></span>
+        <span class="chip">${tshort(f.h)} CS <b>${pct(m.cs_h)}</b></span><span class="chip">${tshort(f.a)} CS <b>${pct(m.cs_a)}</b></span>
+        ${f.market?`<span class="chip">Market ${tshort(f.h)} <b>${pct(f.market.p[0])}</b></span>`:""}</div>
+    </a>`;
+  }).join("");
+  afterRender.push(()=>drawTop("goals"));
+  return `${freshness()}
+  <section><div class="eyebrow">Gameweek ${gw}</div><h2 class="h2">This week's matchups</h2>
+    <p class="lead">Win, draw and loss chances come from each team's expected goals for and against, adjusted for who they played. Tap a match for player props, injuries and what each defense gives up.</p>
+    <div class="grid g3">${cards || '<div class="box empty">No upcoming fixtures in the data.</div>'}</div></section>
+  <section><h2 class="h2">Strongest prop numbers this week</h2>
+    <p class="lead">Chance of going over the main line <b>if he starts</b>. Start chance is shown next to it, because books settle most player props once a player comes on.</p>
+    <div class="box"><div class="seg" id="topSeg">${PROP_ORDER.map(s=>`<button data-s="${s}" aria-pressed="${s==='goals'}">${STAT_LABEL[s]}</button>`).join("")}</div>
+    <div id="topList" style="margin-top:12px"></div></div></section>`;
+}
+function drawTop(s){
+  document.querySelectorAll("#topSeg button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.s===s);b.onclick=()=>drawTop(b.dataset.s)});
+  const el=$("#topList"); if(!el) return;
+  if(!has(s)){ el.innerHTML = `<p>${liveNote(s)}</p>`; return }
+  const line = D.meta.stats[s].lines[s==="tackles"?1:s==="saves"?2:0];
+  const rows = D.projections.filter(p=>p.m[s]).map(p=>({p, pr:priceLine(p,s,line)})).sort((a,b)=>b.pr.ps-a.pr.ps).slice(0,12);
+  el.innerHTML = `<div class="tw"><table><thead><tr><th>Player</th><th>Match</th><th class="r">Starts</th><th class="r">Over ${line} if starts</th><th class="r">Fair odds</th></tr></thead><tbody>
+  ${rows.map(({p,pr})=>{const pl=PL.get(p.pid);return `<tr><td>${plink(pl)} <span class="tiny muted">${pl.pos}</span> ${p.avail<1?statusPill(pl):""}</td>
+    <td class="small"><a href="#match-${p.fixture}">${tshort(p.team)} ${p.home?"v":"@"} ${tshort(p.opp)}</a></td><td class="num">${pct(p.p_start)}</td>
+    <td>${probBar(pr.ps)}</td><td class="num">${american(pr.ps)}</td></tr>`}).join("")}</tbody></table></div>`;
+}
+
+// ---------------------------------------------------------------- MATCH
+function viewMatch(fid){
+  const f = FIX.get(fid); if(!f) return `<div class="box empty">That match isn't in this week's data.</div>`;
+  const m = f.model, H=TM.get(f.h), A=TM.get(f.a);
+  const mk = f.market;
+  const mrow = (label,p,mp)=>`<tr><td>${label}</td><td>${probBar(p)}</td><td class="num">${american(p)}</td>${mk?`<td class="num">${mp!=null?pct(mp):"–"}</td>`:""}</tr>`;
+  const teamMarkets = `<div class="box"><h3 class="h3">Match markets</h3><div class="tw"><table>
+    <thead><tr><th>Market</th><th class="r">Model</th><th class="r">Fair odds</th>${mk?`<th class="r">Market (no vig)</th>`:""}</tr></thead><tbody>
+    ${mrow(H.short+" win",m.p_home,mk?.p[0])}${mrow("Draw",m.p_draw,mk?.p[1])}${mrow(A.short+" win",m.p_away,mk?.p[2])}
+    ${mrow("Over 1.5 goals",m.o15)}${mrow("Over 2.5 goals",m.o25,mk?.p_o25)}${mrow("Over 3.5 goals",m.o35)}
+    ${mrow("Both teams score",m.btts)}${mrow(H.short+" clean sheet",m.cs_h)}${mrow(A.short+" clean sheet",m.cs_a)}</tbody></table></div>
+    <p class="note">Most likely scores: ${m.top_scores.map(([s,p])=>`<span class="mono">${s}</span> (${pct(p)})`).join(" · ")}.
+    Goal totals lean heavily on the league average, because last season's backtest showed team strength barely predicts how many goals a match has. ${mk?`Market odds: ${esc(mk.src)}.`:"Bookmaker odds fill in from football-data.co.uk when the live refresh runs."}</p></div>`;
+
+  const props = `<div class="box"><div class="spread"><h3 class="h3">Player props</h3><div class="seg" id="mpSeg">${PROP_ORDER.map(s=>`<button data-s="${s}" aria-pressed="${s==='goals'}">${STAT_LABEL[s]}</button>`).join("")}</div></div>
+    <div id="mpBody" style="margin-top:10px"></div></div>`;
+  afterRender.push(()=>drawMatchProps(f,"goals"));
+
+  const avail = [H,A].map(T=>{
+    const out = D.players.filter(p=>p.team===T.id && (p.status!=="a" || (p.chance!=null && p.chance<100)) && p.status!=="u")
+      .sort((a,b)=>(TOT.get(b.code)?.mins||0)-(TOT.get(a.code)?.mins||0));
+    return `<div><div class="h3">${esc(T.name)}</div>${out.length?`<div class="tw"><table><tbody>${out.map(p=>`<tr><td>${plink(p)} <span class="tiny muted">${p.pos} · ${TOT.get(p.code)?.mins||0} mins this season</span></td><td>${statusPill(p)}</td><td class="small">${esc(p.news)}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted small">No injury or suspension flags.</p>'}</div>`;
+  }).join("");
+  const setp = [H,A].map(T=>{
+    const take = k=>D.players.filter(p=>p.team===T.id && p[k]===1).map(plink).join(", ")||"–";
+    return `<div><b>${T.short}</b> <dl class="kv"><dt>Penalties</dt><dd>${take("pens")}</dd><dt>Corners</dt><dd>${take("corners")}</dd><dt>Direct free kicks</dt><dd>${take("fks")}</dd></dl></div>`;
+  }).join("");
+
+  const comp = teamCompare(H,A);
+  const allows = `<div class="grid g2">${allowsBox(A, "What "+A.short+" gives up", H.short+" players face this")}${allowsBox(H, "What "+H.short+" gives up", A.short+" players face this")}</div>`;
+  const h2h = D.h2h.filter(r=>(r[2]===H.short&&r[3]===A.short)||(r[2]===A.short&&r[3]===H.short));
+  const h2hBox = `<div class="box"><h3 class="h3">Recent meetings</h3>${h2h.length?`<table><tbody>${h2h.map(r=>`<tr><td class="small">${day(r[1])}</td><td>${tlink(r[2])} <b class="num">${r[4]}–${r[5]}</b> ${tlink(r[3])}</td><td class="tiny muted">${r[0]}</td></tr>`).join("")}</tbody></table>`:'<p class="muted">No Premier League meetings in the last two seasons (a promoted side, most likely).</p>'}</div>`;
+
+  return `${freshness()}
+  <section><div class="eyebrow">Gameweek ${f.gw} · ${kick(f.kickoff)}</div>
+    <h2 class="h2">${tlink(H.short)} ${esc(H.name)} v ${esc(A.name)} ${tlink(A.short)}</h2>
+    <div class="grid g2">${teamMarkets}${comp}</div></section>
+  <section><h2 class="h2">Props</h2>${props}</section>
+  <section><h2 class="h2">Availability &amp; set pieces</h2><div class="box"><div class="grid g2">${avail}</div><div class="note">FPL injury flags, as of ${day(D.meta.news_as_of)}.</div></div>
+    <div class="box"><h3 class="h3">Set-piece takers (FPL order)</h3><div class="grid g2">${setp}</div></div></section>
+  <section><h2 class="h2">Defensive matchup</h2><p class="lead">How each defense treats each position compared with the league. Tap any number to see the exact players and games behind it.</p>${allows}</section>
+  <section>${h2hBox}</section>`;
+}
+function drawMatchProps(f, s){
+  document.querySelectorAll("#mpSeg button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.s===s);b.onclick=()=>drawMatchProps(f,b.dataset.s)});
+  const el=$("#mpBody"); if(!el) return;
+  if(!has(s)){ el.innerHTML = liveNote(s); return }
+  const lines = D.meta.stats[s].lines;
+  const rows = D.projections.filter(p=>p.fixture===f.id && p.m[s]).sort((a,b)=>b.m[s].lam*(b.p_start)-a.m[s].lam*(a.p_start));
+  el.innerHTML = `<div class="tw"><table><thead><tr><th>Player</th><th>Team</th><th class="r">Starts</th>${lines.map(l=>`<th class="r">Over ${l}<br><span class="tiny">if starts</span></th>`).join("")}<th class="r">Over ${lines[0]}<br><span class="tiny">if plays</span></th><th class="r">Rate /90</th><th class="r">Matchup</th></tr></thead><tbody>
+  ${rows.map(p=>{const pl=PL.get(p.pid), mk=p.m[s];return `<tr><td>${plink(pl)} <span class="tiny muted">${pl.pos}</span> ${p.avail<1?statusPill(pl):""}</td><td>${tshort(p.team)}</td><td class="num">${pct(p.p_start)}</td>
+    ${mk.lines.map(l=>`<td>${probBar(l[1])}</td>`).join("")}<td class="num">${pct(mk.lines[0][2])}</td><td class="num">${f1(mk.r90,2)}</td><td class="num ${mk.fac>1.05?"f-hi":mk.fac<.95?"f-lo":""}">${f1(mk.fac,2)}×</td></tr>`}).join("")}
+  </tbody></table></div><p class="note">Rate /90 blends this season, last season and the position average. Matchup is the multiplier from this opponent (and home or away). Players ruled out by FPL flags are left off.</p>`;
+}
+function teamStatAverages(short){
+  const rows = D.team_stats.filter(r=>r.home===short||r.away===short);
+  const cur = rows.filter(r=>r.season===SEASON), use = cur.length?cur:rows.filter(r=>r.season===PREV_SEASON);
+  if(!use.length) return null;
+  const a = {n:use.length, season:use[0].season}; const keys=["shots","sot","fouls","corners","yellow"];
+  keys.forEach(k=>{a[k+"_f"]=0;a[k+"_a"]=0});
+  use.forEach(r=>{const h=r.home===short; keys.forEach(k=>{a[k+"_f"]+=(h?r["h_"+k]:r["a_"+k])||0; a[k+"_a"]+=(h?r["a_"+k]:r["h_"+k])||0})});
+  keys.forEach(k=>{a[k+"_f"]/=use.length;a[k+"_a"]/=use.length}); return a;
+}
+function teamCompare(H,A){
+  const sh=TM_BY_SHORT, ha=teamStatAverages(H.short), aa=teamStatAverages(A.short);
+  const r=(label,a,b,d=2)=>`<tr><td>${label}</td><td class="num">${a}</td><td class="num">${b}</td></tr>`;
+  const pm=(t,k)=>t.mp?f1(t[k]/t.mp,2):"–";
+  const fd = (x,k)=>x?f1(x[k],1):"–";
+  const fdSeason = ha?.season===SEASON&&aa?.season===SEASON ? "this season" : "last season (this season's team match stats fill in from football-data.co.uk on the live refresh)";
+  return `<div class="box"><h3 class="h3">Team comparison</h3><div class="tw"><table><thead><tr><th></th><th class="r">${H.short}</th><th class="r">${A.short}</th></tr></thead><tbody>
+  ${r("Record (W-D-L)",`${H.w}-${H.d}-${H.l}`,`${A.w}-${A.d}-${A.l}`)}
+  ${r("Goals for / match",pm(H,"gf"),pm(A,"gf"))}${r("Goals against / match",pm(H,"ga"),pm(A,"ga"))}
+  ${r("xG for / match",pm(H,"xgf"),pm(A,"xgf"))}${r("xG against / match",pm(H,"xga"),pm(A,"xga"))}
+  ${r("Attack rating",f1(H.att,2)+"×",f1(A.att,2)+"×")}${r("Defense rating (lower is better)",f1(H.def,2)+"×",f1(A.def,2)+"×")}
+  ${r("Shots for / against",`${fd(ha,"shots_f")} / ${fd(ha,"shots_a")}`,`${fd(aa,"shots_f")} / ${fd(aa,"shots_a")}`)}
+  ${r("On target for / against",`${fd(ha,"sot_f")} / ${fd(ha,"sot_a")}`,`${fd(aa,"sot_f")} / ${fd(aa,"sot_a")}`)}
+  ${r("Fouls committed / drawn",`${fd(ha,"fouls_f")} / ${fd(ha,"fouls_a")}`,`${fd(aa,"fouls_f")} / ${fd(aa,"fouls_a")}`)}
+  ${r("Corners for / against",`${fd(ha,"corners_f")} / ${fd(ha,"corners_a")}`,`${fd(aa,"corners_f")} / ${fd(aa,"corners_a")}`)}
+  ${r("Yellow cards / opponent's",`${fd(ha,"yellow_f")} / ${fd(ha,"yellow_a")}`,`${fd(aa,"yellow_f")} / ${fd(aa,"yellow_a")}`)}
+  </tbody></table></div><p class="note">Ratings: 1.00 is league average. ${H.mp} and ${A.mp} league matches this season. Shots, fouls, corners and cards per match from ${fdSeason}; blank for clubs promoted this summer.</p></div>`;
+}
+
+// ---------------------------------------------------------------- "allows" with drill-down
+function allowsTable(T){
+  const rows = POSS.map(pos=>{
+    const r = per90(LOGS.filter(o=>o.season===SEASON && o.opp_s===T.short && o.pos===pos && o.minutes>0));
+    const lg = LEAGUE90[pos];
+    const cells = ALLOW_STATS.map(s=>{
+      if(pos==="GK" && !["saves","cards"].includes(s)) return `<td class="num na">·</td>`;
+      if(pos!=="GK" && s==="saves") return `<td class="num na">·</td>`;
+      if(r[s]==null||!lg[s]) return `<td class="num na">–</td>`;
+      const ratio = r[s]/lg[s];
+      return `<td class="num cell-link ${ratio>1.15?"f-hi":ratio<.87?"f-lo":""}" tabindex="0" role="button" data-team="${T.short}" data-pos="${pos}" data-s="${s}" title="${STAT_LABEL[s]||s} by opposing ${pos}s">${f1(r[s],2)}<br><span class="tiny">${f1(ratio,2)}×</span></td>`;
+    }).join("");
+    return `<tr><th>${pos}</th>${cells}<td class="num tiny">${f1(r._n90,0)}</td></tr>`;
+  }).join("");
+  return `<div class="tw"><table><thead><tr><th>Vs</th>${ALLOW_STATS.map(s=>`<th class="r">${({xg:"xG",goals:"Goals",shots:"Shots",sot:"SoT",tackles:"Tkl",fouls:"Fouls",cards:"Cards",saves:"Saves",def_contrib:"Def con"})[s]}</th>`).join("")}<th class="r">90s</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function allowsBox(T, title, sub){
+  return `<div class="box"><div class="spread"><h3 class="h3">${esc(title)}</h3><span class="tiny muted">${esc(sub)}</span></div>${allowsTable(T)}
+  <p class="note">Per 90 minutes by opposing players at each position this season; the second number is vs the league average (green = gives up more). The projections also fold in last season at half weight and shrink small samples toward average.</p></div>`;
+}
+document.addEventListener("click", e=>{
+  const c = e.target.closest("[data-team][data-pos][data-s]"); if(c) drill(c.dataset.team,c.dataset.pos,c.dataset.s);
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeModal();
+  const c = e.target.closest?.("[data-team][data-pos][data-s]"); if(c && (e.key==="Enter"||e.key===" ")){e.preventDefault();drill(c.dataset.team,c.dataset.pos,c.dataset.s)}
+});
+function drill(team,pos,s){
+  const T=TM_BY_SHORT.get(team), lab=STAT_LABEL[s]||({xg:"xG"}[s])||s;
+  const blocks = [SEASON,PREV_SEASON].map(season=>{
+    const rows = LOGS.filter(o=>o.season===season && o.opp_s===team && o.pos===pos && o.minutes>0 && o[s]!=null).sort((a,b)=>b[s]-a[s]||b.minutes-a.minutes);
+    if(!rows.length) return `<p class="muted"><b>${season}:</b> no rows${season===PREV_SEASON?" (only current-league players are kept from last season; promoted clubs have none)":""}.</p>`;
+    const tot = rows.reduce((a,r)=>a+r[s],0), mins = rows.reduce((a,r)=>a+r.minutes,0);
+    return `<h3 class="h3" style="margin-top:12px">${season}: ${f1(tot,s==="xg"?2:0)} ${lab.toLowerCase()} in ${f1(mins/90,1)} 90s = ${f1(tot/(mins/90),2)} per 90 ${season===SEASON&&LEAGUE90[pos][s]?`<span class="muted small">(league ${f1(LEAGUE90[pos][s],2)})</span>`:""}</h3>
+    <div class="tw" style="max-height:340px;overflow:auto"><table><thead><tr><th>Date</th><th>Player</th><th>For</th><th class="r">Min</th><th class="r">${esc(lab)}</th></tr></thead><tbody>
+    ${rows.map(r=>{const p=PL_BY_CODE.get(r.code);return `<tr><td class="small">${day(r.kickoff)}</td><td>${p?plink(p):r.code}</td><td>${tlink(r.team_s)}</td><td class="num">${r.minutes}</td><td class="num"><b>${f1(r[s],s==="xg"?2:0)}</b></td></tr>`}).join("")}</tbody></table></div>`;
+  }).join("");
+  openModal(`<div class="spread"><div><div class="eyebrow" style="color:var(--ink-2)">Opposing ${pos}s vs ${esc(T?.name||team)}</div><h2 class="h3" style="font-size:22px">${esc(lab)} given up</h2></div><button class="btn" onclick="closeModal()">Close</button></div>${blocks}`);
+}
+function openModal(inner){ const m=$("#modal"); m.innerHTML=`<div class="scrim" onclick="if(event.target===this)closeModal()"><div class="box" role="dialog" aria-modal="true">${inner}</div></div>`; m.hidden=false; m.querySelector("button")?.focus() }
+function closeModal(){ const m=$("#modal"); if(m){m.hidden=true;m.innerHTML=""} }
+
+// ---------------------------------------------------------------- PLAYER
+function viewPlayer(id){
+  const p = PL.get(id); if(!p) return `<div class="box empty">Player not found.</div>`;
+  const T = TM.get(p.team), logs = LOG_BY_CODE.get(p.code)||[], projs = PROJ.get(id)||[];
+  const mm = p.mins_model||{};
+  const head = `<section><div class="player-head"><div><div class="eyebrow">${esc(T.name)} · ${p.pos}</div><h2>${esc(p.web)}</h2><div class="small" style="color:var(--chalk-dim)">${esc(p.name)}</div></div>
+    <div class="row">${statusPill(p)}${p.pens===1?'<span class="pill ok">On penalties</span>':""}${p.corners===1?'<span class="pill ok">Corners</span>':""}${p.fks===1?'<span class="pill ok">Direct FKs</span>':""}</div></div>
+    ${p.news?`<div class="banner" style="margin-top:10px">${esc(p.news)} <span class="chalk-dim">· ${day(p.news_added)}</span></div>`:""}</section>`;
+
+  const projBox = projs.length ? projs.map(pr=>{
+    const f = FIX.get(pr.fixture);
+    const stats = PROP_ORDER.filter(s=>pr.m[s]);
+    return `<div class="box"><div class="spread"><h3 class="h3">Next: ${pr.home?"v":"@"} ${tlink(tshort(pr.opp))} · ${kick(f.kickoff)}</h3><a class="small" href="#match-${f.id}">Full matchup</a></div>
+    <div class="row" style="gap:26px;margin:4px 0 12px">
+      <div><div class="stat-big">${pct(pr.p_start)}</div><div class="tiny muted">chance to start</div></div>
+      <div><div class="stat-big">${f1(pr.ms,0)}′</div><div class="tiny muted">minutes when he starts</div></div>
+      <div><div class="stat-big">${f1(pr.em,0)}′</div><div class="tiny muted">expected minutes overall</div></div>
+      ${pr.avail<1?`<div><div class="stat-big">${pct(pr.avail)}</div><div class="tiny muted">FPL availability</div></div>`:""}
+    </div>
+    <div class="tw"><table><thead><tr><th>Prop</th><th class="r">Line</th><th class="r">Over if starts</th><th class="r">Fair odds</th><th class="r">Over if plays</th><th class="r">Under if starts</th></tr></thead><tbody>
+    ${stats.map(s=> has(s) ? pr.m[s].lines.map((l,i)=>`<tr><td>${i===0?`<b>${STAT_LABEL[s]}</b>`:""}</td><td class="num">${l[0]}</td><td>${probBar(l[1])}</td><td class="num">${american(l[1])}</td><td class="num">${pct(l[2])}</td><td class="num">${pct(1-l[1])} <span class="tiny muted">${american(1-l[1])}</span></td></tr>`).join("")
+      : `<tr><td><b>${STAT_LABEL[s]}</b></td><td colspan="5">${liveNote(s)}</td></tr>`).join("")}
+    ${["shots","sot","fouls"].filter(s=>!pr.m[s] && !has(s) && p.pos!=="GK").map(s=>`<tr><td><b>${STAT_LABEL[s]}</b></td><td colspan="5">${liveNote(s)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <details class="note"><summary><b>How these numbers are built</b></summary>
+      <div class="tw" style="margin-top:8px"><table><thead><tr><th>Stat</th><th class="r">This season /90</th><th class="r">90s</th><th class="r">Last season /90</th><th class="r">Blended /90</th><th class="r">Matchup</th><th class="r">Expected if starts</th></tr></thead><tbody>
+      ${stats.filter(has).map(s=>{const r=p.rates[s]||{};return `<tr><td>${STAT_LABEL[s]}</td><td class="num">${f1(r.cur_rate90,2)}</td><td class="num">${f1(r.cur_n90,1)}</td><td class="num">${f1(r.prev_rate90,2)}</td><td class="num">${f1(pr.m[s].r90,2)}</td><td class="num">${f1(pr.m[s].fac,2)}×</td><td class="num">${f1(pr.m[s].lam,2)}</td></tr>`}).join("")}
+      </tbody></table></div>
+      <p>Each rate is this season's per-90 number pulled toward his own last season (counted at 60%) and then toward the ${p.pos} average, so a hot three-game run doesn't swing the projection. Goals and assists use expected goals and assists, mixed with a little of the real totals. The matchup multiplier comes from the opponent's defensive rating for attacking stats, and from what the opponent gives up to ${p.pos}s for tackles, fouls, cards and saves. Probabilities then go through a calibration fitted on last season's backtest.</p>
+      <p>Start chance weights recent team selection more heavily: ${mm.starts??0} starts and ${(mm.apps??0)-(mm.starts??0)} sub appearances in ${mm.team_matches??0} team matches this season.</p>
+    </details>
+    ${lineChecker(pr)}</div>`;
+  }).join("") : `<div class="box"><p class="muted">No projection for the next gameweek${p.status!=="a"?" because he's flagged as "+({i:"injured",s:"suspended",u:"unavailable",d:"doubtful"}[p.status]||p.status):""}.</p></div>`;
+
+  // season summary (whole picture: both seasons)
+  const sum = season=>{
+    const rows = logs.filter(o=>o.season===season); if(!rows.length) return null;
+    const m = rows.reduce((a,r)=>a+(r.minutes||0),0), n90=m/90;
+    const g = k=>{const v=rows.filter(r=>r[k]!=null); return v.length?v.reduce((a,r)=>a+r[k],0):null};
+    return {season, apps:rows.filter(r=>r.minutes>0).length, starts:g("starts"), mins:m, n90, vals:Object.fromEntries(["goals","assists","xg","xa","shots","sot","tackles","cbi","recoveries","fouls","cards","saves","def_contrib"].map(k=>[k,g(k)]))};
+  };
+  const ss = [sum(SEASON), sum(PREV_SEASON)].filter(Boolean);
+  const keys = p.pos==="GK" ? ["saves","cards","goals_conceded"] : ["goals","xg","assists","xa","shots","sot","tackles","cbi","recoveries","fouls","cards","def_contrib"];
+  const labels = {goals:"Goals",xg:"xG",assists:"Assists",xa:"xA",shots:"Shots",sot:"SoT",tackles:"Tackles",cbi:"Clear/blk/int",recoveries:"Recoveries",fouls:"Fouls",cards:"Cards",def_contrib:"Def con",saves:"Saves",goals_conceded:"Conceded"};
+  const seasonBox = `<div class="box"><h3 class="h3">Season totals and per 90</h3>${ss.length?`<div class="tw"><table><thead><tr><th>Season</th><th class="r">Apps</th><th class="r">Starts</th><th class="r">Min</th>${keys.map(k=>`<th class="r">${labels[k]}</th>`).join("")}</tr></thead><tbody>
+    ${ss.map(x=>`<tr><td><b>${x.season}</b></td><td class="num">${x.apps}</td><td class="num">${x.starts??"–"}</td><td class="num">${x.mins}</td>${keys.map(k=>{const v=x.vals[k]??(k==="goals_conceded"?logs.filter(o=>o.season===x.season).reduce((a,r)=>a+(r.goals_conceded||0),0):null);return `<td class="num">${v==null?'<span class="na">–</span>':f1(v,["xg","xa"].includes(k)?2:0)}</td>`}).join("")}</tr>
+    <tr><td class="tiny muted">per 90</td><td></td><td></td><td></td>${keys.map(k=>{const v=x.vals[k]??(k==="goals_conceded"?logs.filter(o=>o.season===x.season).reduce((a,r)=>a+(r.goals_conceded||0),0):null);return `<td class="num tiny">${v==null||!x.n90?"–":f1(v/x.n90,2)}</td>`}).join("")}</tr>`).join("")}
+    </tbody></table></div>`:'<p class="muted">No Premier League minutes in the last two seasons.</p>'}
+    ${!has("shots")&&p.pos!=="GK"?`<p class="note">Shots, shots on target and fouls show "–" until the live refresh pulls Understat and ESPN.</p>`:""}</div>`;
+
+  // vs next opponent
+  const nextOpp = projs[0] ? tshort(projs[0].opp) : null;
+  const vsRows = nextOpp ? logs.filter(o=>o.opp_s===nextOpp) : [];
+  const vsBox = nextOpp ? `<div class="box"><h3 class="h3">Against ${tlink(nextOpp)} before</h3>${vsRows.length?gameLog(vsRows,p.pos):`<p class="muted">No previous Premier League meetings with ${esc(nextOpp)} in the data.</p>`}</div>`:"";
+  const oppBox = nextOpp ? `<div class="box"><h3 class="h3">What ${tlink(nextOpp)} gives up to ${p.pos}s</h3>${allowsTable(TM_BY_SHORT.get(nextOpp))}<p class="note">Tap a number for the players and games behind it.</p></div>`:"";
+
+  const fantasy = `<section class="fantasy"><span class="eyebrow">Fantasy (FPL) · kept separate from props</span><div class="box"><div class="grid g3">
+    <dl class="kv"><dt>Price</dt><dd>£${f1(p.price,1)}m</dd><dt>Owned by</dt><dd>${f1(p.sel,1)}%</dd><dt>Total points</dt><dd>${p.fpl_pts??"–"}</dd></dl>
+    <dl class="kv"><dt>Form</dt><dd>${f1(p.form,1)}</dd><dt>FPL's expected pts next</dt><dd>${f1(p.ep_next,1)}</dd><dt>Bonus this season</dt><dd>${logs.filter(o=>o.season===SEASON).reduce((a,r)=>a+(r.bonus||0),0)}</dd></dl>
+    <div>${projs[0]?.m.def_contrib?`<b class="small">Defensive contribution points</b><p class="small muted">FPL pays 2 points at ${p.pos==="DEF"?"10":"12"}+ clearances, blocks, interceptions and tackles${p.pos==="DEF"?"":" plus recoveries"}.</p>${projs[0].m.def_contrib.lines.map(l=>`<div class="spread small"><span>${l[0]+0.5}+ if starts</span>${probBar(l[1])}</div>`).join("")}`:'<p class="small muted">No defensive contribution projection.</p>'}</div>
+  </div></div></section>`;
+
+  return `${head}<section><h2 class="h2">Props</h2>${projBox}</section>
+  <section><h2 class="h2">The whole picture</h2>${seasonBox}<div class="grid g2" style="margin-top:14px">${vsBox}${oppBox}</div></section>
+  <section><h2 class="h2">Every match</h2><div class="box">${logs.length?gameLog(logs,p.pos):'<p class="muted">No matches.</p>'}</div></section>
+  ${fantasy}`;
+}
+function gameLog(rows,pos){
+  const cols = pos==="GK" ? [["minutes","Min"],["saves","Sv"],["goals_conceded","GA"],["xgc","xGA"],["cards","Crd"],["fpl_pts","FPL"]]
+    : [["minutes","Min"],["goals","G"],["assists","A"],["xg","xG"],["xa","xA"],["shots","Sh"],["sot","SoT"],["tackles","Tkl"],["cbi","CBI"],["recoveries","Rec"],["fouls","Fls"],["cards","Crd"],["fpl_pts","FPL"]];
+  return `<div class="tw" style="max-height:440px;overflow:auto"><table><thead><tr><th>Date</th><th>Opp</th><th>Score</th><th></th>${cols.map(c=>`<th class="r">${c[1]}</th>`).join("")}</tr></thead><tbody>
+  ${rows.map(r=>`<tr><td class="small">${day(r.kickoff)} <span class="tiny muted">${r.season===SEASON?"":r.season}</span></td><td>${r.was_home?"v":"@"} ${tlink(r.opp_s)}</td><td class="num small">${esc(r.score)}</td><td>${r.starts?'<span class="pill n">Start</span>':r.minutes>0?'<span class="tiny muted">Sub</span>':'<span class="tiny muted">DNP</span>'}</td>
+   ${cols.map(([k])=>`<td class="num">${r[k]==null?'<span class="na">–</span>':f1(r[k],["xg","xa","xgc"].includes(k)?2:0)}</td>`).join("")}</tr>`).join("")}
+  </tbody></table></div>`;
+}
+function lineChecker(pr){
+  const opts = PROP_ORDER.filter(s=>pr.m[s]&&has(s));
+  const id = "lc"+pr.pid+"_"+pr.fixture;
+  afterRender.push(()=>{
+    const go=()=>{
+      const s=$(`#${id}s`).value, L=parseFloat($(`#${id}l`).value), side=$(`#${id}side`).value, odds=$(`#${id}o`).value;
+      const out=$(`#${id}out`); if(isNaN(L)){out.textContent="Enter a line like 1.5.";return}
+      const q=priceLine(pr,s,L); let ps=q.ps, pp=q.pp; if(side==="under"){ps=1-ps;pp=1-pp}
+      const imp=impliedFromAmerican(odds);
+      out.innerHTML = `Model: <b>${pct(ps,1)}</b> if he starts, <b>${pct(pp,1)}</b> if he plays (fair ${american(pp)}).` + (imp!=null?` Book implies <b>${pct(imp,1)}</b> → edge <b class="${pp-imp>0?"f-hi":"f-lo"}">${pp-imp>0?"+":""}${((pp-imp)*100).toFixed(1)} pts</b> on the if-plays number. ${verdict(pp-imp)}`:"");
+    };
+    [`${id}s`,`${id}l`,`${id}side`,`${id}o`].forEach(k=>{const e=$("#"+k); if(e) e.addEventListener("input",go)}); if($(`#${id}s`)) go();
+  });
+  return `<div class="note"><b>Check a sportsbook line</b><div class="row" style="margin-top:6px">
+    <label class="f" for="${id}s">Prop<select id="${id}s">${opts.map(s=>`<option value="${s}">${STAT_LABEL[s]}</option>`).join("")}</select></label>
+    <label class="f" for="${id}side">Side<select id="${id}side"><option value="over">Over</option><option value="under">Under</option></select></label>
+    <label class="f" for="${id}l">Line<input id="${id}l" type="number" step="0.5" value="${pr.m[opts[0]]?.lines[0][0]??0.5}" style="width:80px"></label>
+    <label class="f" for="${id}o">Book odds<input id="${id}o" placeholder="e.g. +150" style="width:100px"></label></div>
+    <p id="${id}out" class="small" style="margin-top:8px"></p></div>`;
+}
+function verdict(e){ return e>0.05?"Line looks generous.":e>0.02?"Small edge.":e>-0.02?"Priced about right.":"Book has the better side." }
+
+// ---------------------------------------------------------------- PROPS BOARD
+let PS = {s:"goals", line:0.5, team:"", pos:"", minStart:50, basis:"ps"};
+function viewProps(){
+  afterRender.push(drawProps, drawWatch);
+  const teams = [...new Set(D.projections.map(p=>p.team))].map(id=>TM.get(id)).sort((a,b)=>a.name<b.name?-1:1);
+  return `${freshness()}<section><div class="eyebrow">Gameweek ${D.meta.next_gw}</div><h2 class="h2">Prop board</h2>
+  <p class="lead">Every projected player for every market. Use "if starts" once lineups drop (about an hour before kickoff); "if plays" before that, since most books settle once he comes on.</p>
+  <div class="box"><div class="row" style="align-items:flex-end">
+    <label class="f" for="ps_s">Market<select id="ps_s">${PROP_ORDER.map(s=>`<option value="${s}" ${s===PS.s?"selected":""}>${STAT_LABEL[s]}${has(s)?"":" (not connected yet)"}</option>`).join("")}</select></label>
+    <label class="f" for="ps_l">Line<select id="ps_l"></select></label>
+    <label class="f" for="ps_t">Team<select id="ps_t"><option value="">All teams</option>${teams.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join("")}</select></label>
+    <label class="f" for="ps_p">Position<select id="ps_p"><option value="">All</option>${POSS.map(p=>`<option>${p}</option>`).join("")}</select></label>
+    <label class="f" for="ps_m">Min start chance <span id="ps_mv" class="mono">${PS.minStart}%</span><input id="ps_m" type="range" min="0" max="95" step="5" value="${PS.minStart}"></label>
+    <label class="f" for="ps_b">Probability<select id="ps_b"><option value="ps">If he starts</option><option value="pp">If he plays</option></select></label>
+  </div><div id="psBody" style="margin-top:12px"></div></div></section>
+  <section><h2 class="h2">Line checker</h2><p class="lead">Add the lines you're looking at. Each one is priced against the model and sorted by edge. Saved in this browser only.</p>
+  <div class="box"><div class="row" style="align-items:flex-end">
+    <label class="f" for="w_p">Player<input id="w_p" list="plist" placeholder="Start typing a name" style="width:220px"></label>
+    <label class="f" for="w_s">Prop<select id="w_s">${PROP_ORDER.filter(has).map(s=>`<option value="${s}">${STAT_LABEL[s]}</option>`).join("")}</select></label>
+    <label class="f" for="w_side">Side<select id="w_side"><option value="over">Over</option><option value="under">Under</option></select></label>
+    <label class="f" for="w_l">Line<input id="w_l" type="number" step="0.5" value="0.5" style="width:80px"></label>
+    <label class="f" for="w_o">Book odds<input id="w_o" placeholder="+150" style="width:90px"></label>
+    <button class="btn primary" id="w_add">Add line</button></div>
+    <p id="w_msg" class="small muted" style="margin-top:6px"></p>
+    <datalist id="plist">${D.players.filter(p=>PROJ.has(p.id)).map(p=>`<option value="${esc(p.web)} (${tshort(p.team)} ${p.pos}) #${p.id}">`).join("")}</datalist>
+    <div id="wBody" style="margin-top:10px"></div></div></section>`;
+}
+function drawProps(){
+  const sEl=$("#ps_s"), lEl=$("#ps_l");
+  const fillLines=()=>{ const ls=D.meta.stats[PS.s].lines; if(!ls.includes(PS.line)) PS.line=ls[0]; lEl.innerHTML=ls.map(l=>`<option ${l===PS.line?"selected":""}>${l}</option>`).join("") };
+  fillLines();
+  sEl.onchange=()=>{PS.s=sEl.value;fillLines();drawProps()};
+  lEl.onchange=()=>{PS.line=parseFloat(lEl.value);table()};
+  $("#ps_t").onchange=e=>{PS.team=e.target.value;table()}; $("#ps_p").onchange=e=>{PS.pos=e.target.value;table()};
+  $("#ps_b").value=PS.basis; $("#ps_b").onchange=e=>{PS.basis=e.target.value;table()};
+  $("#ps_m").oninput=e=>{PS.minStart=+e.target.value;$("#ps_mv").textContent=PS.minStart+"%";table()};
+  $("#ps_t").value=PS.team; $("#ps_p").value=PS.pos;
+  table();
+  function table(){
+    const el=$("#psBody"), s=PS.s;
+    if(!has(s)){ el.innerHTML=`<p>${liveNote(s)}</p>`; return }
+    const rows = D.projections.filter(p=>p.m[s] && (!PS.team||p.team==PS.team) && (!PS.pos||p.pos===PS.pos) && p.p_start*100>=PS.minStart)
+      .map(p=>({p,q:priceLine(p,s,PS.line)})).sort((a,b)=>b.q[PS.basis]-a.q[PS.basis]);
+    el.innerHTML = `<p class="small muted">Showing ${rows.length} players.</p><div class="tw"><table><thead><tr><th>Player</th><th>Match</th><th class="r">Starts</th><th class="r">Over ${PS.line}</th><th class="r">Fair over</th><th class="r">Fair under</th><th class="r">Rate /90</th><th class="r">Matchup</th></tr></thead><tbody>
+    ${rows.slice(0,150).map(({p,q})=>{const pl=PL.get(p.pid),v=q[PS.basis],mk=p.m[s];return `<tr><td>${plink(pl)} <span class="tiny muted">${pl.pos}</span> ${p.avail<1?statusPill(pl):""}</td><td class="small"><a href="#match-${p.fixture}">${tshort(p.team)} ${p.home?"v":"@"} ${tshort(p.opp)}</a></td>
+      <td class="num">${pct(p.p_start)}</td><td>${probBar(v)}</td><td class="num">${american(v)}</td><td class="num">${american(1-v)}</td><td class="num">${f1(mk.r90,2)}</td><td class="num ${mk.fac>1.05?"f-hi":mk.fac<.95?"f-lo":""}">${f1(mk.fac,2)}×</td></tr>`}).join("")}
+    </tbody></table></div>${rows.length>150?'<p class="small muted">Top 150 shown; filter by team or position to see the rest.</p>':""}`;
+  }
+}
+function getWatch(){ try{ return JSON.parse(localStorage.getItem("pitch_watch")||"[]") }catch(e){ return [] } }
+function setWatch(w){ try{ localStorage.setItem("pitch_watch",JSON.stringify(w)) }catch(e){} }
+function drawWatch(){
+  const add=$("#w_add"); if(!add) return;
+  add.onclick=()=>{
+    const v=$("#w_p").value, m=v.match(/#(\d+)$/), msg=$("#w_msg");
+    if(!m||!PL.has(+m[1])){ msg.textContent="Pick a player from the list."; return }
+    const pid=+m[1], s=$("#w_s").value, L=parseFloat($("#w_l").value);
+    if(!PROJ.get(pid)?.some(pr=>pr.m[s])){ msg.textContent=`No ${STAT_LABEL[s].toLowerCase()} projection for that player this week.`; return }
+    if(isNaN(L)){ msg.textContent="Enter a line like 1.5."; return }
+    const w=getWatch(); w.push({pid,s,line:L,side:$("#w_side").value,odds:$("#w_o").value.trim()}); setWatch(w); msg.textContent="Added."; drawWatch();
+  };
+  const w=getWatch().map((x,i)=>{const pr=PROJ.get(x.pid)?.find(p=>p.m[x.s]); if(!pr) return {x,i,gone:true};
+    let q=priceLine(pr,x.s,x.line), pp=x.side==="under"?1-q.pp:q.pp, ps=x.side==="under"?1-q.ps:q.ps; const imp=impliedFromAmerican(x.odds);
+    return {x,i,pr,pp,ps,imp,edge:imp!=null?pp-imp:null}}).sort((a,b)=>(b.edge??-9)-(a.edge??-9));
+  const el=$("#wBody");
+  el.innerHTML = w.length?`<div class="tw"><table><thead><tr><th>Player</th><th>Line</th><th class="r">Book</th><th class="r">Book implies</th><th class="r">Model if plays</th><th class="r">If starts</th><th class="r">Edge</th><th>Verdict</th><th></th></tr></thead><tbody>
+  ${w.map(r=>{const pl=PL.get(r.x.pid);if(r.gone)return `<tr><td>${pl?plink(pl):r.x.pid}</td><td colspan="7" class="na">No projection this gameweek.</td><td><button class="btn" data-del="${r.i}">Remove</button></td></tr>`;
+    return `<tr><td>${plink(pl)}</td><td class="small">${r.x.side==="under"?"Under":"Over"} ${r.x.line} ${STAT_LABEL[r.x.s].toLowerCase()}</td><td class="num">${esc(r.x.odds||"–")}</td><td class="num">${pct(r.imp,1)}</td><td class="num">${pct(r.pp,1)}</td><td class="num">${pct(r.ps,1)}</td>
+    <td class="num ${r.edge>0?"f-hi":"f-lo"}">${r.edge==null?"–":(r.edge>0?"+":"")+(r.edge*100).toFixed(1)}</td><td class="small">${r.edge==null?"Add odds to compare":verdict(r.edge)}</td><td><button class="btn" data-del="${r.i}">Remove</button></td></tr>`}).join("")}
+  </tbody></table></div><p class="note">Book implied probability includes the sportsbook's margin, so a small positive edge can still be a fair price.</p>`
+  :`<p class="muted small">No lines yet. Example: Haaland, Goals, Over 0.5 at −150.</p>`;
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const w=getWatch();w.splice(+b.dataset.del,1);setWatch(w);drawWatch()});
+}
+
+// ---------------------------------------------------------------- PLAYERS
+let PLS = {q:"", team:"", pos:"", sort:"name"};
+function viewPlayers(){
+  afterRender.push(drawPlayers);
+  return `<section><h2 class="h2">Players</h2><div class="box"><div class="row" style="align-items:flex-end">
+    <label class="f" for="pl_q">Search<input id="pl_q" value="${esc(PLS.q)}" placeholder="Name" style="width:200px"></label>
+    <label class="f" for="pl_t">Team<select id="pl_t"><option value="">All teams</option>${D.teams.slice().sort((a,b)=>a.name<b.name?-1:1).map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join("")}</select></label>
+    <label class="f" for="pl_p">Position<select id="pl_p"><option value="">All</option>${POSS.map(p=>`<option>${p}</option>`).join("")}</select></label>
+    <label class="f" for="pl_s">Sort<select id="pl_s"><option value="name">Name</option><option value="mins">Minutes</option><option value="goals">Goals</option><option value="xg">xG</option><option value="assists">Assists</option><option value="tackles">Tackles</option><option value="saves">Saves</option><option value="fpl_pts">FPL points</option></select></label>
+    <button class="btn" id="pl_c">Clear filters</button></div><div id="plBody" style="margin-top:12px"></div></div></section>`;
+}
+function drawPlayers(){
+  const set=()=>{PLS.q=$("#pl_q").value;PLS.team=$("#pl_t").value;PLS.pos=$("#pl_p").value;PLS.sort=$("#pl_s").value;table()};
+  ["pl_q","pl_t","pl_p","pl_s"].forEach(k=>$("#"+k).addEventListener("input",set));
+  $("#pl_t").value=PLS.team;$("#pl_p").value=PLS.pos;$("#pl_s").value=PLS.sort;
+  $("#pl_c").onclick=()=>{PLS={q:"",team:"",pos:"",sort:"name"};$("#pl_q").value="";$("#pl_t").value="";$("#pl_p").value="";$("#pl_s").value="name";table()};
+  table();
+  function table(){
+    const q=PLS.q.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    const all=D.players.filter(p=>p.status!=="u"||TOT.get(p.code)?.mins);
+    let rows=all.filter(p=>(!q||(p.web+" "+p.name).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").includes(q))&&(!PLS.team||p.team==PLS.team)&&(!PLS.pos||p.pos===PLS.pos));
+    const t=p=>TOT.get(p.code)||{};
+    rows.sort(PLS.sort==="name"?(a,b)=>a.web.localeCompare(b.web):(a,b)=>((PLS.sort==="fpl_pts"?b.fpl_pts:t(b)[PLS.sort])||0)-((PLS.sort==="fpl_pts"?a.fpl_pts:t(a)[PLS.sort])||0));
+    $("#plBody").innerHTML=`<p class="small muted">Showing ${Math.min(rows.length,250)} of ${rows.length} (${all.length} total).</p><div class="tw"><table><thead><tr><th>Player</th><th>Team</th><th>Pos</th><th>Status</th><th class="r">Min</th><th class="r">Starts</th><th class="r">G</th><th class="r">xG</th><th class="r">A</th><th class="r">Tkl</th><th class="r">Sv</th><th class="r">Next start</th></tr></thead><tbody>
+    ${rows.slice(0,250).map(p=>{const x=t(p);return `<tr><td>${plink(p)}</td><td>${tlink(tshort(p.team))}</td><td>${p.pos}</td><td>${statusPill(p)}</td><td class="num">${x.mins||0}</td><td class="num">${x.starts||0}</td><td class="num">${x.goals||0}</td><td class="num">${f1(x.xg||0,2)}</td><td class="num">${x.assists||0}</td><td class="num">${x.tackles||0}</td><td class="num">${p.pos==="GK"?x.saves||0:"·"}</td><td class="num">${PROJ.has(p.id)?pct(PROJ.get(p.id)[0].p_start):"–"}</td></tr>`}).join("")}
+    </tbody></table></div>`;
+  }
+}
+
+// ---------------------------------------------------------------- TEAMS
+function viewTeams(){
+  const ts=D.teams.slice().sort((a,b)=>(b.att/b.def)-(a.att/a.def));
+  return `<section><h2 class="h2">Teams</h2><p class="lead">Ranked by attack divided by defense rating. Ratings come from expected goals, adjusted for opponents and blended with last season (promoted clubs start at last season's relegated-side level).</p>
+  <div class="box"><div class="tw"><table><thead><tr><th>#</th><th>Team</th><th class="r">MP</th><th class="r">W-D-L</th><th class="r">GF</th><th class="r">GA</th><th class="r">xGF</th><th class="r">xGA</th><th class="r">Attack</th><th class="r">Defense</th></tr></thead><tbody>
+  ${ts.map((t,i)=>`<tr><td class="num">${i+1}</td><td><a href="#team-${t.short}">${esc(t.name)}</a></td><td class="num">${t.mp}</td><td class="num">${t.w}-${t.d}-${t.l}</td><td class="num">${t.gf}</td><td class="num">${t.ga}</td><td class="num">${f1(t.xgf,1)}</td><td class="num">${f1(t.xga,1)}</td><td class="num">${f1(t.att,2)}</td><td class="num">${f1(t.def,2)}</td></tr>`).join("")}
+  </tbody></table></div></div></section>
+  <section><h2 class="h2">Referees</h2><p class="lead">Fouls and cards per match by referee. Upcoming referee appointments aren't in any free feed, so they aren't used in projections yet.</p>
+  <div class="box"><div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>Referee</th><th class="r">Matches</th><th class="r">Fouls / match</th><th class="r">Yellows / match</th><th class="r">Reds</th><th>Seasons</th></tr></thead><tbody>
+  ${D.referees.map(r=>`<tr><td>${esc(r.ref)}</td><td class="num">${r.matches}</td><td class="num">${f1(r.fouls_pm,1)}</td><td class="num">${f1(r.yellows_pm,2)}</td><td class="num">${r.reds}</td><td class="small">${r.seasons.join(", ")}</td></tr>`).join("")||'<tr><td colspan="6" class="na">No referee data.</td></tr>'}
+  </tbody></table></div></div></section>`;
+}
+function viewTeam(short){
+  const T=TM_BY_SHORT.get(short); if(!T) return `<div class="box empty">Team not found.</div>`;
+  const roster=D.players.filter(p=>p.team===T.id && (p.status!=="u"||TOT.get(p.code)?.mins)).sort((a,b)=>(TOT.get(b.code)?.mins||0)-(TOT.get(a.code)?.mins||0));
+  const games=D.schedule.filter(f=>f.h===T.id||f.a===T.id);
+  return `<section><div class="eyebrow">Team</div><h2 class="h2">${esc(T.name)}</h2>
+  <div class="grid g2"><div class="box"><h3 class="h3">Schedule</h3><div class="tw" style="max-height:380px;overflow:auto"><table><tbody>
+  ${games.map(f=>{const home=f.h===T.id,opp=tshort(home?f.a:f.h);const res=f.finished?(home?`${f.hs}–${f.as}`:`${f.as}–${f.hs}`):"";const wl=f.finished?((home?f.hs-f.as:f.as-f.hs)>0?"W":(f.hs===f.as?"D":"L")):"";
+    return `<tr><td class="small">GW${f.gw}</td><td class="small">${day(f.kickoff)}</td><td>${home?"v":"@"} ${tlink(opp)}</td><td class="num">${res} <b>${wl}</b></td><td>${FIX.has(f.id)?`<a href="#match-${f.id}">Matchup</a>`:""}</td></tr>`}).join("")}
+  </tbody></table></div></div>${allowsBox(T,"What "+T.short+" gives up","per 90 by position")}</div></section>
+  <section><h2 class="h2">Squad</h2><div class="box"><div class="tw"><table><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th class="r">Min</th><th class="r">Starts</th><th class="r">G</th><th class="r">A</th><th class="r">xG</th><th class="r">Tkl</th><th class="r">Cards</th></tr></thead><tbody>
+  ${roster.map(p=>{const x=TOT.get(p.code)||{};return `<tr><td>${plink(p)}</td><td>${p.pos}</td><td>${statusPill(p)}</td><td class="num">${x.mins||0}</td><td class="num">${x.starts||0}</td><td class="num">${x.goals||0}</td><td class="num">${x.assists||0}</td><td class="num">${f1(x.xg||0,2)}</td><td class="num">${x.tackles||0}</td><td class="num">${x.cards||0}</td></tr>`}).join("")}
+  </tbody></table></div></div></section>`;
+}
+
+// ---------------------------------------------------------------- COMPARE
+let CMP=[null,null];
+function viewCompare(){
+  afterRender.push(drawCompare);
+  return `<section><h2 class="h2">Compare players</h2><div class="box"><div class="row" style="align-items:flex-end">
+  <label class="f" for="c1">Player A<input id="c1" list="clist" placeholder="Start typing" style="width:240px"></label>
+  <label class="f" for="c2">Player B<input id="c2" list="clist" placeholder="Start typing" style="width:240px"></label></div>
+  <datalist id="clist">${D.players.filter(p=>TOT.has(p.code)||LOG_BY_CODE.has(p.code)).map(p=>`<option value="${esc(p.web)} (${tshort(p.team)} ${p.pos}) #${p.id}">`).join("")}</datalist>
+  <div id="cBody" style="margin-top:12px"></div></div></section>`;
+}
+function drawCompare(){
+  const pick=(i)=>{const m=$("#c"+(i+1)).value.match(/#(\d+)$/); CMP[i]=m?+m[1]:CMP[i]; draw()};
+  $("#c1").addEventListener("input",()=>pick(0)); $("#c2").addEventListener("input",()=>pick(1));
+  CMP.forEach((id,i)=>{ if(id){const p=PL.get(id);$("#c"+(i+1)).value=`${p.web} (${tshort(p.team)} ${p.pos}) #${p.id}`} });
+  draw();
+  function draw(){
+    const ps=CMP.map(id=>PL.get(id)).filter(Boolean); const el=$("#cBody");
+    if(ps.length<2){ el.innerHTML='<p class="muted">Pick two players to see their rates, both seasons, and this week\'s numbers side by side.</p>'; return }
+    const stats=["goals","assists","shots","sot","tackles","fouls","cards","saves"].filter(s=>has(s));
+    const r=(lab,f)=>`<tr><td>${lab}</td>${ps.map(p=>`<td class="num">${f(p)}</td>`).join("")}</tr>`;
+    const nextP=(p,s)=>{const pr=PROJ.get(p.id)?.[0];return pr?.m[s]?pct(pr.m[s].lines[0][1]):"–"};
+    el.innerHTML=`<div class="tw"><table><thead><tr><th></th>${ps.map(p=>`<th class="r">${plink(p)} <span class="tiny muted">${tshort(p.team)} ${p.pos}</span></th>`).join("")}</tr></thead><tbody>
+    ${r("Minutes this season",p=>TOT.get(p.code)?.mins||0)}${r("Next match start chance",p=>PROJ.has(p.id)?pct(PROJ.get(p.id)[0].p_start):"–")}
+    ${stats.map(s=>r(STAT_LABEL[s]+" /90 this season",p=>f1(p.rates[s]?.cur_rate90,2))+r(STAT_LABEL[s]+" /90 last season",p=>f1(p.rates[s]?.prev_rate90,2))+r(`<b>${STAT_LABEL[s]}: over ${D.meta.stats[s].lines[0]} next match</b>`,p=>nextP(p,s))).join("")}
+    </tbody></table></div><p class="note">Goals and assists per 90 here use the expected-goals blend the model runs on, not raw totals.</p>`;
+  }
+}
+
+// ---------------------------------------------------------------- MODEL & DATA
+let MS="tackles";
+function viewModel(){
+  const m=D.meta, bt=D.backtest, lv=D.live_grade, lvr=D.live_grade_raw;
+  afterRender.push(()=>drawCalib(MS));
+  const srcRows=m.sources.map(s=>`<tr><td>${esc(s.source)}</td><td>${s.ok?'<span class="pill ok">Connected</span>':'<span class="pill warn">Not reached</span>'}</td><td class="num">${s.rows||"–"}</td><td class="small">${s.as_of?day(s.as_of):"–"}</td><td class="small">${esc(s.note)}</td></tr>`).join("");
+  const health=m.health.map(h=>`<tr><td class="small">${h.season}</td><td>${esc(h.check)}</td><td>${h.failed?`<span class="pill bad">${h.failed} failed</span>`:'<span class="pill ok">Pass</span>'}</td><td class="num">${h.passed}</td><td class="small">${esc(h.detail)}</td></tr>`).join("");
+  const mkt=(res)=>res?.markets?.length?`<div class="tw"><table><thead><tr><th>Market</th><th class="r">Graded</th><th class="r">Actual hit rate</th><th class="r">Avg prediction</th><th class="r">Model error</th><th class="r">Hit-rate error</th><th class="r">Improvement</th></tr></thead><tbody>
+    ${res.markets.map(x=>`<tr><td>${STAT_LABEL[x.m]} over ${x.line}</td><td class="num">${x.n}</td><td class="num">${pct(x.hit_rate,1)}</td><td class="num">${pct(x.avg_pred,1)}</td><td class="num">${x.brier_model.toFixed(4)}</td><td class="num">${x.brier_base.toFixed(4)}</td><td class="num ${x.skill>0?"f-hi":"f-lo"}">${x.skill>0?"+":""}${(x.skill*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Not enough graded matches yet.</p>';
+  const t=bt?.team;
+  return `<section><h2 class="h2">How accurate is it?</h2>
+  <p class="lead">Last season was replayed one gameweek at a time: before each round the model only saw matches already played, projected every starter, and was then graded against what happened. "Error" is the Brier score (lower is better). The comparison is the player's raw hit rate in his earlier starts, which is what most prop apps show.</p>
+  <div class="box"><div class="spread"><h3 class="h3">${bt?.season} backtest · GW${bt?.gws?.[0]}–${bt?.gws?.[1]} · ${bt?.n?.toLocaleString()} graded lines</h3><span class="tiny muted">raw model, before calibration</span></div>${mkt(bt)}</div>
+  <div class="box"><div class="spread"><h3 class="h3">Calibration: when it says X%, does it happen X% of the time?</h3><div class="seg" id="calSeg">${Object.keys(bt.calibration).map(s=>`<button data-s="${s}" aria-pressed="${s===MS}">${STAT_LABEL[s]}</button>`).join("")}</div></div>
+    <div class="legend" style="margin:8px 0"><span style="--c:var(--model)">Model</span><span style="--c:var(--base)">Raw hit rate</span><span style="--c:var(--ink-3)">Perfect calibration</span></div>
+    <div id="calChart"></div><p class="note">Points closer to the diagonal are better. Each point averages at least 30 graded lines. Raw hit rates swing to extremes (0% or 100% after a few starts) and land far off the line.</p></div>
+  <div class="box"><h3 class="h3">This season so far (out of sample)</h3><p class="small muted">GW${lv?.gws?.[0]}–${lv?.gws?.[1]} of ${SEASON}, using the calibration fitted on last season. None of these matches were used to build or tune the model.</p>${mkt(lv)}
+    ${lvr?.markets?.length?`<p class="note">Calibration effect this season: total error ${(lv.markets.reduce((a,x)=>a+x.brier_model*x.n,0)).toFixed(1)} calibrated vs ${(lvr.markets.reduce((a,x)=>a+x.brier_model*x.n,0)).toFixed(1)} raw (summed over all graded lines).</p>`:""}</div>
+  ${t?`<div class="box"><h3 class="h3">Match markets (${bt.season}, ${t.n} matches)</h3><div class="tw"><table><thead><tr><th>Market</th><th class="r">Model error</th><th class="r">League-average error</th></tr></thead><tbody>
+    <tr><td>Win / draw / loss</td><td class="num">${t.brier_1x2_model}</td><td class="num">${t.brier_1x2_base}</td></tr>
+    <tr><td>Over 2.5 goals</td><td class="num">${t.brier_o25_model}</td><td class="num">${t.brier_o25_base}</td></tr>
+    <tr><td>Both teams score</td><td class="num">${t.brier_btts_model}</td><td class="num">${t.brier_btts_base}</td></tr></tbody></table></div>
+    <p class="note">The model beats league averages on who wins (favorite won ${pct(t.fav_hit)} of matches) but not on goal totals or both-teams-to-score. Last season, predicted match totals had almost no relationship with actual totals, so totals are kept close to the league average. Treat totals as context, not an edge.</p></div>`:""}
+  </section>
+  <section><h2 class="h2">Where the data comes from</h2>
+  <div class="box"><h3 class="h3">Sources this build</h3><div class="tw"><table><thead><tr><th>Source</th><th>Status</th><th class="r">Rows</th><th>Through</th><th>Notes</th></tr></thead><tbody>${srcRows}</tbody></table></div>
+  <p class="note">"Not reached" sources are blocked in the build environment used for this snapshot; the weekly GitHub Actions run reaches all of them.</p></div>
+  <div class="box"><h3 class="h3">Data checks</h3><p class="small muted">Independent feeds are checked against each other on every build.</p><div class="tw"><table><thead><tr><th>Season</th><th>Check</th><th>Result</th><th class="r">Passed</th><th>Detail</th></tr></thead><tbody>${health}</tbody></table></div></div>
+  <div class="box"><h3 class="h3">What free data can't cover</h3><div class="tw"><table><thead><tr><th>Gap</th><th>Why it matters</th><th>Cheapest fix</th></tr></thead><tbody>
+    <tr><td>Passes per player</td><td>Pass-attempt props (midfielders, center backs)</td><td>API-Football Pro, $19/mo: per-player passes, key passes, tackles, fouls, shots</td></tr>
+    <tr><td>Sportsbook player prop lines</td><td>Automatic edges instead of typing lines in</td><td>The Odds API, $30/mo (20K credits); EPL shots-on-target props confirmed, mostly US books</td></tr>
+    <tr><td>Confirmed lineups</td><td>Turns start chance into a yes/no an hour out</td><td>API-Football lineups endpoint (20–40 min before kickoff), same $19 plan</td></tr>
+    <tr><td>Predicted lineups</td><td>Start chance before team news</td><td>Sportmonks expected-lineups add-on on a €29/mo base plan (add-on price not published)</td></tr>
+    <tr><td>Referee appointments</td><td>Cards and fouls props swing with the referee</td><td>No API; the Premier League announces them midweek (scrape)</td></tr>
+    <tr><td>Event data (progressive passes, touches in box, pressures)</td><td>Deeper role and usage context</td><td>Opta / StatsBomb, enterprise pricing</td></tr>
+  </tbody></table></div><p class="note">Recommended first spend: API-Football Pro. It fills passes and confirms lineups, and it's a licensed feed, so it can replace the unofficial ESPN dependency.</p></div>
+  <div class="box"><h3 class="h3">Model settings fitted from data</h3><dl class="kv">
+    <dt>Home goals / away goals per match</dt><dd>${m.ratings_mu.home} / ${m.ratings_mu.away}</dd>
+    <dt>Extra spread vs Poisson (lower = more spread)</dt><dd>${Object.entries(m.dispersion).filter(([,v])=>v).map(([k,v])=>`${STAT_LABEL[k]} ${v}`).join(", ")||"none"}</dd>
+    <dt>Calibration (intercept, slope)</dt><dd>${Object.entries(bt.platt||{}).map(([k,v])=>`${STAT_LABEL[k]} ${v[0]}, ${v[1]}`).join(" · ")}</dd></dl></div>
+  </section>`;
+}
+function drawCalib(s){
+  MS=s; document.querySelectorAll("#calSeg button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.s===s);b.onclick=()=>drawCalib(b.dataset.s)});
+  const el=$("#calChart"); if(!el) return;
+  const mod=D.backtest.calibration[s]||[], base=D.backtest.calibration_base?.[s]||[];
+  const W=560,H=360,ml=48,mr=16,mt=12,mb=40,iw=W-ml-mr,ih=H-mt-mb, x=v=>ml+v*iw, y=v=>mt+ih-v*ih;
+  const ticks=[0,.2,.4,.6,.8,1];
+  const line=(pts,c)=>pts.length?`<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map(p=>`${x(p[0])},${y(p[1])}`).join(" ")}"/>`+pts.map(p=>`<circle cx="${x(p[0])}" cy="${y(p[1])}" r="5" fill="${c}" stroke="var(--steel)" stroke-width="2" data-tip="Predicted ${pct(p[0],1)} → happened ${pct(p[1],1)} (${p[2]} lines)"></circle>`).join(""):"";
+  const last=(pts)=>pts[pts.length-1];
+  el.innerHTML=`<div class="tw"><svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block" role="img" aria-label="Calibration chart for ${STAT_LABEL[s]}">
+   ${ticks.map(t=>`<line x1="${x(0)}" x2="${x(1)}" y1="${y(t)}" y2="${y(t)}" stroke="var(--steel-3)" stroke-width="1"/><text x="${ml-8}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--ink-2)" font-family="IBM Plex Mono,monospace">${t*100}%</text><text x="${x(t)}" y="${H-mb+18}" text-anchor="middle" font-size="11" fill="var(--ink-2)" font-family="IBM Plex Mono,monospace">${t*100}%</text>`).join("")}
+   <line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="5 5"/>
+   ${line(base,"var(--base)")}${line(mod,"var(--model)")}
+   ${mod.length?`<text x="${Math.min(x(last(mod)[0])+8,W-60)}" y="${y(last(mod)[1])-8}" font-size="12" fill="var(--ink)" font-weight="700">Model</text>`:""}
+   <text x="${ml+iw/2}" y="${H-4}" text-anchor="middle" font-size="12" fill="var(--ink-2)">Predicted chance</text>
+   <text transform="translate(12 ${mt+ih/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--ink-2)">How often it happened</text>
+  </svg></div>`;
+  const tip=$("#tip");
+  el.querySelectorAll("[data-tip]").forEach(c=>{
+    c.addEventListener("mouseenter",e=>{tip.textContent=c.dataset.tip;tip.hidden=false});
+    c.addEventListener("mousemove",e=>{tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-30)+"px"});
+    c.addEventListener("mouseleave",()=>tip.hidden=true);
+  });
+}
+
+load().then(route).catch(e=>{ $("#app").innerHTML=`<div class="box empty">Couldn't load the data file (${esc(e.message)}). If you opened index.html straight from disk, serve the folder instead: <span class="mono">python -m http.server</span>.</div>` });
+</script>
